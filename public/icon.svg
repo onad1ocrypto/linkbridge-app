@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <rect width="512" height="512" rx="128" fill="#090D16"/>
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#6366F1"/>
+    </linearGradient>
+    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+  </defs>
+  <!-- Laptop frame -->
+  <rect x="70" y="160" width="240" height="150" rx="16" stroke="url(#grad1)" stroke-width="12" fill="#0F172A"/>
+  <path d="M40 310H340C348 310 354 316 354 324V328C354 332 350 336 346 336H34C30 336 26 332 26 328V324C26 316 32 310 40 310Z" fill="url(#grad1)"/>
+  
+  <!-- Phone frame -->
+  <rect x="290" y="190" width="150" height="250" rx="28" stroke="url(#grad2)" stroke-width="12" fill="#0B1329"/>
+  <rect x="340" y="206" width="50" height="6" rx="3" fill="#64748B"/>
+  <circle cx="365" cy="410" r="10" fill="#64748B"/>
+  
+  <!-- Wireless / Bridge Waves -->
+  <path d="M220 220C245 195 285 195 310 220" stroke="#38BDF8" stroke-width="8" stroke-linecap="round" stroke-dasharray="2 12"/>
+  <path d="M235 240C250 225 275 225 290 240" stroke="#38BDF8" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="262" cy="255" r="6" fill="#38BDF8"/>
+</svg>

@@ -1,0 +1,6 @@
+{
+  "name": "LinkBridge - Phone to Laptop Connector",
+  "description": "Elegant cross-device connectivity platform by SASAM for phone & laptop: instant file transfer, wireless trackpad, shared clipboard, presentation remote, and wireless camera streaming.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
