@@ -190,6 +190,7 @@ export const PhoneDashboard: React.FC<PhoneDashboardProps> = ({
             onSendMouseMove={onSendMouseMove}
             onSendMouseClick={onSendMouseClick}
             onSendMouseScroll={onSendMouseScroll}
+            currentLang={currentLang}
           />
         )}
 
@@ -198,6 +199,7 @@ export const PhoneDashboard: React.FC<PhoneDashboardProps> = ({
             onSendKeyboardInput={onSendKeyboardInput}
             onSendKeyAction={onSendKeyAction}
             onSendMediaControl={onSendMediaControl}
+            currentLang={currentLang}
           />
         )}
 
@@ -206,6 +208,7 @@ export const PhoneDashboard: React.FC<PhoneDashboardProps> = ({
             files={files}
             onUploadFile={onUploadFile}
             uploadProgress={uploadProgress}
+            currentLang={currentLang}
           />
         )}
 
@@ -215,12 +218,14 @@ export const PhoneDashboard: React.FC<PhoneDashboardProps> = ({
             onSendClipboard={onSendClipboard}
             notes={notes}
             onUpdateNotes={onUpdateNotes}
+            currentLang={currentLang}
           />
         )}
 
         {mobileTab === 'presentation' && (
           <PhonePresentationRemote
             onSendPresentationAction={onSendPresentationAction}
+            currentLang={currentLang}
           />
         )}
 
@@ -229,6 +234,7 @@ export const PhoneDashboard: React.FC<PhoneDashboardProps> = ({
             onSendCameraFrame={onSendCameraFrame}
             onSendCameraControl={onSendCameraControl}
             onUploadFile={onUploadFile}
+            currentLang={currentLang}
           />
         )}
       </div>

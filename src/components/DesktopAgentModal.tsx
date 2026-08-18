@@ -35,6 +35,8 @@ export const DesktopAgentModal: React.FC<DesktopAgentModalProps> = ({
 
   if (!isOpen) return null;
 
+  const t = translations[currentLang] || translations.en;
+
   const currentHost =
     typeof window !== 'undefined'
       ? window.location.host
@@ -48,11 +50,11 @@ export const DesktopAgentModal: React.FC<DesktopAgentModalProps> = ({
   // Python Agent Script code
   const pythonScript = `# ==========================================================
 # LinkBridge - Native OS Mouse & Keyboard Controller
-# Menggerakkan Kursor OS Asli (Windows / macOS / Linux) dari HP
+# Control Real OS Cursor (Windows / macOS / Linux) from Phone
 # ==========================================================
-# Cara pakai:
-# 1. Install library:  pip install pyautogui websocket-client
-# 2. Jalankan script: python linkbridge-agent.py
+# Setup:
+# 1. pip install pyautogui websocket-client
+# 2. python linkbridge-agent-${roomId}.py
 # ==========================================================
 
 import json
@@ -63,23 +65,23 @@ import sys
 ROOM_ID = "${roomId}"
 WS_URL = "${targetWsUrl}"
 
-pyautogui.FAILSAFE = False  # Mencegah kursor terhenti di pojok layar
+pyautogui.FAILSAFE = False
 
-print(f"[*] Memulai LinkBridge Native Agent...")
-print(f"[*] Menghubungkan ke Room: {ROOM_ID}")
+print(f"[*] Starting LinkBridge Native Companion Agent...")
+print(f"[*] Connecting to Room PIN: {ROOM_ID}")
 
 def on_message(ws, message):
     try:
         data = json.loads(message)
         msg_type = data.get("type")
         
-        # 1. Gerakkan Kursor OS Asli
+        # 1. Move real OS cursor
         if msg_type == "mouse_move":
             dx = data.get("dx", 0) * 16
             dy = data.get("dy", 0) * 16
             pyautogui.moveRel(dx, dy)
             
-        # 2. Klik Mouse OS Asli
+        # 2. Click real OS mouse
         elif msg_type == "mouse_click":
             btn = data.get("button", "left")
             if data.get("isDown"):
@@ -87,12 +89,12 @@ def on_message(ws, message):
             else:
                 pyautogui.mouseUp(button=btn)
                 
-        # 3. Scroll Halaman OS Asli
+        # 3. Scroll real OS page
         elif msg_type == "mouse_scroll":
             delta = data.get("scrollY", 0)
             pyautogui.scroll(int(-delta * 6))
             
-        # 4. Kontrol Media OS (Volume, Play/Pause)
+        # 4. Control Media & Volume
         elif msg_type == "media_control":
             action = data.get("action")
             if action == "volume_up": pyautogui.press("volumeup")
@@ -102,11 +104,11 @@ def on_message(ws, message):
             elif action == "next": pyautogui.press("nexttrack")
             elif action == "previous": pyautogui.press("prevtrack")
             
-        # 5. Ketik Teks OS Asli
+        # 5. Type real text
         elif msg_type == "keyboard_input":
             pyautogui.write(data.get("text", ""))
             
-        # 6. Tombol Navigasi
+        # 6. Shortcut Keys
         elif msg_type == "key_action":
             k = data.get("key", "").lower()
             if k == "enter": pyautogui.press("enter")
@@ -118,7 +120,7 @@ def on_message(ws, message):
         pass
 
 def on_open(ws):
-    print(f"[OK] TERHUBUNG KE HP! Gerakkan kursor di HP Anda sekarang.")
+    print(f"[OK] CONNECTED TO PHONE! Move cursor on your phone now.")
     ws.send(json.dumps({
         "type": "join",
         "roomId": ROOM_ID,
@@ -128,7 +130,7 @@ def on_open(ws):
     }))
 
 def on_close(ws, status, msg):
-    print("[!] Koneksi terputus. Mencoba menghubungkan ulang...")
+    print("[!] Connection closed. Reconnecting...")
 
 if __name__ == "__main__":
     while True:
@@ -175,6 +177,7 @@ if __name__ == "__main__":
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition-colors border border-slate-800"
+          title={t.close}
         >
           <X className="w-4 h-4" />
         </button>
@@ -186,10 +189,10 @@ if __name__ == "__main__":
           </div>
           <div>
             <h3 className="font-serif font-bold text-lg text-amber-200">
-              Native OS Remote Mouse (Kontrol Penuh Kursor Laptop)
+              {t.osAgentTitle}
             </h3>
             <p className="text-xs text-slate-400">
-              Penjelasan Sandbox Browser & Cara Menggerakkan Kursor OS Asli di Seluruh Layar Laptop
+              {t.osAgentSubtitle}
             </p>
           </div>
         </div>
@@ -198,26 +201,26 @@ if __name__ == "__main__":
         <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-100/90 leading-relaxed space-y-2">
           <div className="flex items-center gap-2 font-bold text-amber-300">
             <ShieldCheck className="w-4 h-4" />
-            <span>Mengapa Browser Membatasi Kursor di Dalam Tab Web?</span>
+            <span>{t.whySandboxTitle}</span>
           </div>
           <p className="text-slate-300">
-            Semua browser web di dunia (Chrome, Edge, Safari) memiliki aturan keamanan (*Browser Sandbox*) yang **melarang website menggerakkan kursor asli sistem operasi di luar tab** demi mencegah malware membajak mouse Anda.
+            {t.whySandboxDesc}
           </p>
           <p className="text-slate-300">
-            <strong>Solusinya:</strong> Jalankan script pembantu ringan (*Native Companion Agent*) 1-file di bawah ini di laptop Anda. Kursor fisik laptop Windows / Mac / Linux Anda akan <strong>sepenuhnya bisa digerakkan dari HP di aplikasi apa pun (Desktop, YouTube, Game, PPT, File Explorer)!</strong>
+            <strong>{t.solutionTitle}:</strong> {t.solutionDesc}
           </p>
         </div>
 
         {/* Step-by-Step Instructions */}
         <div className="space-y-3">
           <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-            Langkah Cepat (Hanya 1 Menit):
+            {t.quickStepsTitle}
           </h4>
 
           {/* Step 1 */}
           <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 flex items-center justify-between gap-3">
             <div className="space-y-1">
-              <span className="text-[11px] font-bold text-amber-300">1. Install library Python di laptop Anda:</span>
+              <span className="text-[11px] font-bold text-amber-300">{t.agentStep1Title}</span>
               <div className="font-mono text-xs text-slate-300 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
                 pip install pyautogui websocket-client
               </div>
@@ -227,34 +230,34 @@ if __name__ == "__main__":
               className="p-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-300 text-xs font-semibold flex items-center gap-1.5 transition-colors shrink-0"
             >
               {copiedCmd ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-              <span>{copiedCmd ? 'Tersalin' : 'Salin'}</span>
+              <span>{copiedCmd ? t.copied : t.copy}</span>
             </button>
           </div>
 
           {/* Step 2 */}
           <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 flex items-center justify-between gap-3">
             <div className="space-y-1">
-              <span className="text-[11px] font-bold text-amber-300">2. Download Script Companion untuk Room Anda ({roomId}):</span>
-              <p className="text-[11px] text-slate-400">File script sudah otomatis diatur dengan PIN Room Anda</p>
+              <span className="text-[11px] font-bold text-amber-300">{t.agentStep2Title} ({roomId}):</span>
+              <p className="text-[11px] text-slate-400">{t.agentStep2Desc}</p>
             </div>
             <button
               onClick={handleDownload}
               className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-yellow-500 hover:from-amber-500 text-slate-950 text-xs font-bold flex items-center gap-2 transition-all shadow-md shadow-amber-600/20 shrink-0"
             >
               <Download className="w-4 h-4" />
-              <span>Download .py</span>
+              <span>{t.downloadScript}</span>
             </button>
           </div>
 
           {/* Step 3 */}
           <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1">
-            <span className="text-[11px] font-bold text-amber-300">3. Jalankan script di laptop:</span>
+            <span className="text-[11px] font-bold text-amber-300">{t.agentStep3Title}</span>
             <div className="font-mono text-xs text-slate-300 bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-800">
               python linkbridge-agent-{roomId}.py
             </div>
             <p className="text-[11px] text-emerald-400 pt-1 flex items-center gap-1">
               <Zap className="w-3.5 h-3.5" />
-              Selesai! Sekarang gerakkan kursor di HP Anda, kursor laptop fisik akan langsung bergerak di seluruh layar komputer!
+              {t.agentStep3Success}
             </p>
           </div>
         </div>
@@ -262,13 +265,13 @@ if __name__ == "__main__":
         {/* Code Preview Box */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs text-slate-400">
-            <span className="font-mono text-[11px]">Kode Script Python (Otomatis Sesuai Room {roomId}):</span>
+            <span className="font-mono text-[11px]">{t.scriptCodeTitle} ({roomId}):</span>
             <button
               onClick={handleCopyScript}
               className="text-amber-300 hover:text-amber-200 text-xs font-semibold flex items-center gap-1"
             >
               {copiedScript ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copiedScript ? 'Tersalin' : 'Salin Kode'}</span>
+              <span>{copiedScript ? t.copied : t.copyCode}</span>
             </button>
           </div>
 

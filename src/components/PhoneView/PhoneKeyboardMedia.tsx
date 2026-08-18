@@ -21,6 +21,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { sounds } from '../../utils/audio';
+import { Language, translations } from '../../utils/i18n';
 
 interface PhoneKeyboardMediaProps {
   onSendKeyboardInput: (text: string) => void;
@@ -28,13 +29,16 @@ interface PhoneKeyboardMediaProps {
   onSendMediaControl: (
     action: 'play_pause' | 'volume_up' | 'volume_down' | 'mute' | 'next' | 'previous' | 'fullscreen'
   ) => void;
+  currentLang?: Language;
 }
 
 export const PhoneKeyboardMedia: React.FC<PhoneKeyboardMediaProps> = ({
   onSendKeyboardInput,
   onSendKeyAction,
   onSendMediaControl,
+  currentLang = 'en',
 }) => {
+  const t = translations[currentLang] || translations.en;
   const [textInput, setTextInput] = useState('');
   const [isPlaying, setIsPlaying] = useState(true);
 
@@ -75,10 +79,10 @@ export const PhoneKeyboardMedia: React.FC<PhoneKeyboardMediaProps> = ({
   return (
     <div className="flex flex-col space-y-4 select-none">
       {/* Live Text Input Form */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 space-y-2.5">
+      <div className="bg-[#0e1017] border border-amber-500/20 rounded-2xl p-4 space-y-2.5 shadow-xl shadow-amber-950/10">
         <div className="flex items-center gap-2">
-          <Keyboard className="w-4 h-4 text-cyan-400" />
-          <span className="text-xs font-bold text-slate-200">Kirim Teks Langsung ke Laptop</span>
+          <Keyboard className="w-4 h-4 text-amber-400" />
+          <span className="text-xs font-bold text-amber-200">{t.liveTextInput}</span>
         </div>
 
         <form onSubmit={handleSendText} className="flex gap-2">
@@ -86,178 +90,152 @@ export const PhoneKeyboardMedia: React.FC<PhoneKeyboardMediaProps> = ({
             type="text"
             value={textInput}
             onChange={(e) => setTextInput(e.target.value)}
-            placeholder="Ketik teks di sini lalu kirim..."
-            className="flex-1 px-3 py-2.5 bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none"
+            placeholder={t.typePlaceholder}
+            className="flex-1 px-3.5 py-2.5 bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none"
           />
           <button
             type="submit"
             disabled={!textInput.trim()}
-            className="px-4 py-2.5 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-cyan-600/20 shrink-0"
+            className="px-4 py-2.5 bg-gradient-to-r from-amber-600 to-yellow-500 hover:from-amber-500 disabled:opacity-50 text-slate-950 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-amber-600/20 shrink-0"
           >
             <Send className="w-3.5 h-3.5" />
-            <span>Kirim</span>
+            <span>{t.send}</span>
           </button>
         </form>
       </div>
 
-      {/* Media Controller Box */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 space-y-3">
+      {/* Media Controller Section */}
+      <div className="bg-[#0e1017] border border-amber-500/20 rounded-2xl p-4 space-y-3 shadow-xl shadow-amber-950/10">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-slate-200">Kontrol Media & Volume</span>
-          <span className="text-[10px] text-cyan-400 font-medium">YouTube / Video Player</span>
+          <span className="text-xs font-bold text-amber-200">{t.mediaControls}</span>
+          <span className="text-[10px] text-slate-400">{t.mediaDesc}</span>
         </div>
 
-        {/* Media Buttons */}
-        <div className="grid grid-cols-5 gap-2">
+        {/* Volume & Mute Row */}
+        <div className="grid grid-cols-4 gap-2">
           <button
             onClick={() => handleMedia('volume_down')}
-            className="py-2.5 rounded-xl bg-slate-800/80 active:bg-slate-700 text-slate-300 flex flex-col items-center gap-1 text-[10px]"
+            className="p-3 bg-slate-900 hover:bg-slate-800 active:bg-amber-500 active:text-slate-950 border border-slate-800 rounded-xl text-slate-200 flex flex-col items-center gap-1 transition-all"
           >
-            <Volume1 className="w-4 h-4" />
-            <span>Vol -</span>
-          </button>
-
-          <button
-            onClick={() => handleMedia('previous')}
-            className="py-2.5 rounded-xl bg-slate-800/80 active:bg-slate-700 text-slate-300 flex flex-col items-center gap-1 text-[10px]"
-          >
-            <SkipBack className="w-4 h-4" />
-            <span>Prev</span>
-          </button>
-
-          <button
-            onClick={() => handleMedia('play_pause')}
-            className="py-2.5 rounded-xl bg-cyan-600 active:bg-cyan-500 text-white flex flex-col items-center gap-1 text-[10px] font-bold shadow-md shadow-cyan-600/20"
-          >
-            {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-            <span>{isPlaying ? 'Pause' : 'Play'}</span>
-          </button>
-
-          <button
-            onClick={() => handleMedia('next')}
-            className="py-2.5 rounded-xl bg-slate-800/80 active:bg-slate-700 text-slate-300 flex flex-col items-center gap-1 text-[10px]"
-          >
-            <SkipForward className="w-4 h-4" />
-            <span>Next</span>
+            <Volume1 className="w-4 h-4 text-amber-400" />
+            <span className="text-[10px] font-medium">{t.volDown}</span>
           </button>
 
           <button
             onClick={() => handleMedia('volume_up')}
-            className="py-2.5 rounded-xl bg-slate-800/80 active:bg-slate-700 text-slate-300 flex flex-col items-center gap-1 text-[10px]"
+            className="p-3 bg-slate-900 hover:bg-slate-800 active:bg-amber-500 active:text-slate-950 border border-slate-800 rounded-xl text-slate-200 flex flex-col items-center gap-1 transition-all"
           >
-            <Volume2 className="w-4 h-4" />
-            <span>Vol +</span>
+            <Volume2 className="w-4 h-4 text-amber-400" />
+            <span className="text-[10px] font-medium">{t.volUp}</span>
+          </button>
+
+          <button
+            onClick={() => handleMedia('mute')}
+            className="p-3 bg-slate-900 hover:bg-slate-800 active:bg-amber-500 active:text-slate-950 border border-slate-800 rounded-xl text-slate-200 flex flex-col items-center gap-1 transition-all"
+          >
+            <VolumeX className="w-4 h-4 text-amber-400" />
+            <span className="text-[10px] font-medium">{t.mute}</span>
+          </button>
+
+          <button
+            onClick={() => handleMedia('fullscreen')}
+            className="p-3 bg-slate-900 hover:bg-slate-800 active:bg-amber-500 active:text-slate-950 border border-slate-800 rounded-xl text-slate-200 flex flex-col items-center gap-1 transition-all"
+          >
+            <Maximize2 className="w-4 h-4 text-amber-400" />
+            <span className="text-[10px] font-medium">{t.fullscreen}</span>
           </button>
         </div>
 
-        {/* Sub Media Controls */}
-        <div className="grid grid-cols-2 gap-2">
+        {/* Playback Controls Row */}
+        <div className="flex items-center justify-center gap-3 pt-1">
           <button
-            onClick={() => handleMedia('mute')}
-            className="py-2 rounded-lg bg-slate-950 border border-slate-800 active:bg-slate-800 text-slate-300 text-xs flex items-center justify-center gap-1.5"
+            onClick={() => handleMedia('previous')}
+            className="p-3.5 bg-slate-900 hover:bg-slate-800 active:scale-95 border border-slate-800 rounded-2xl text-slate-200 transition-all"
+            title="Previous"
           >
-            <VolumeX className="w-3.5 h-3.5 text-rose-400" />
-            <span>Mute Suara</span>
+            <SkipBack className="w-5 h-5 text-slate-300" />
           </button>
+
           <button
-            onClick={() => handleMedia('fullscreen')}
-            className="py-2 rounded-lg bg-slate-950 border border-slate-800 active:bg-slate-800 text-slate-300 text-xs flex items-center justify-center gap-1.5"
+            onClick={() => handleMedia('play_pause')}
+            className="p-4 bg-gradient-to-r from-amber-600 to-yellow-500 active:scale-95 text-slate-950 rounded-2xl transition-all shadow-lg shadow-amber-600/25"
+            title="Play / Pause"
           >
-            <Maximize2 className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Layar Penuh (F)</span>
+            {isPlaying ? (
+              <Pause className="w-6 h-6 fill-current" />
+            ) : (
+              <Play className="w-6 h-6 fill-current" />
+            )}
+          </button>
+
+          <button
+            onClick={() => handleMedia('next')}
+            className="p-3.5 bg-slate-900 hover:bg-slate-800 active:scale-95 border border-slate-800 rounded-2xl text-slate-200 transition-all"
+            title="Next"
+          >
+            <SkipForward className="w-5 h-5 text-slate-300" />
           </button>
         </div>
       </div>
 
-      {/* Function & Shortcut Keys */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 space-y-3">
-        <span className="text-xs font-bold text-slate-200 block">Tombol Pintas & Navigasi</span>
+      {/* Quick Action Keypad */}
+      <div className="bg-[#0e1017] border border-amber-500/20 rounded-2xl p-4 space-y-3 shadow-xl shadow-amber-950/10">
+        <span className="text-xs font-bold text-amber-200">{t.shortcutsTitle}</span>
 
-        {/* Row 1: Common Keys */}
-        <div className="grid grid-cols-4 gap-2">
+        {/* Enter, Backspace, Space */}
+        <div className="grid grid-cols-3 gap-2">
           <button
             onClick={() => handleKey('Enter')}
-            className="py-2.5 rounded-xl bg-indigo-600 active:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-sm"
+            className="py-2.5 px-3 bg-slate-900 active:bg-amber-500 active:text-slate-950 border border-slate-800 rounded-xl text-xs font-semibold text-slate-200 flex items-center justify-center gap-1.5 transition-all"
           >
-            <CornerDownLeft className="w-3.5 h-3.5" />
-            <span>Enter</span>
+            <CornerDownLeft className="w-3.5 h-3.5 text-amber-400" />
+            <span>{t.enter}</span>
           </button>
+
           <button
             onClick={() => handleKey('Backspace')}
-            className="py-2.5 rounded-xl bg-slate-800 active:bg-slate-700 text-slate-200 text-xs flex items-center justify-center gap-1"
+            className="py-2.5 px-3 bg-slate-900 active:bg-amber-500 active:text-slate-950 border border-slate-800 rounded-xl text-xs font-semibold text-slate-200 flex items-center justify-center gap-1.5 transition-all"
           >
-            <Delete className="w-3.5 h-3.5" />
-            <span>Hapus</span>
+            <Delete className="w-3.5 h-3.5 text-amber-400" />
+            <span>{t.backspace}</span>
           </button>
+
           <button
-            onClick={() => handleKey('Space')}
-            className="py-2.5 rounded-xl bg-slate-800 active:bg-slate-700 text-slate-200 text-xs flex items-center justify-center gap-1"
+            onClick={() => handleKey(' ')}
+            className="py-2.5 px-3 bg-slate-900 active:bg-amber-500 active:text-slate-950 border border-slate-800 rounded-xl text-xs font-semibold text-slate-200 flex items-center justify-center gap-1.5 transition-all"
           >
-            <Space className="w-3.5 h-3.5" />
-            <span>Spasi</span>
-          </button>
-          <button
-            onClick={() => handleKey('Escape')}
-            className="py-2.5 rounded-xl bg-slate-800 active:bg-slate-700 text-slate-200 text-xs flex items-center justify-center"
-          >
-            <span>Esc</span>
+            <Space className="w-3.5 h-3.5 text-amber-400" />
+            <span>{t.space}</span>
           </button>
         </div>
 
-        {/* Row 2: Shortcuts */}
-        <div className="grid grid-cols-4 gap-2 text-xs">
+        {/* Arrow Keys D-Pad */}
+        <div className="pt-2 flex flex-col items-center gap-1.5">
           <button
-            onClick={() => handleKey('c', { ctrl: true })}
-            className="py-2 rounded-lg bg-slate-950 border border-slate-800 active:bg-slate-800 text-slate-300 font-mono"
+            onClick={() => handleKey('ArrowUp')}
+            className="p-2.5 bg-slate-900 active:bg-amber-500 active:text-slate-950 border border-slate-800 rounded-xl text-slate-300 hover:text-white transition-all shadow-sm"
           >
-            Ctrl+C
+            <ArrowUp className="w-4 h-4" />
           </button>
-          <button
-            onClick={() => handleKey('v', { ctrl: true })}
-            className="py-2 rounded-lg bg-slate-950 border border-slate-800 active:bg-slate-800 text-slate-300 font-mono"
-          >
-            Ctrl+V
-          </button>
-          <button
-            onClick={() => handleKey('z', { ctrl: true })}
-            className="py-2 rounded-lg bg-slate-950 border border-slate-800 active:bg-slate-800 text-slate-300 font-mono"
-          >
-            Ctrl+Z
-          </button>
-          <button
-            onClick={() => handleKey('Tab')}
-            className="py-2 rounded-lg bg-slate-950 border border-slate-800 active:bg-slate-800 text-slate-300 font-mono"
-          >
-            Tab
-          </button>
-        </div>
 
-        {/* Directional Pad */}
-        <div className="flex justify-center pt-1">
-          <div className="grid grid-cols-3 gap-1.5 w-44">
-            <div />
-            <button
-              onClick={() => handleKey('ArrowUp')}
-              className="p-2.5 rounded-xl bg-slate-800 active:bg-cyan-600 text-slate-200 active:text-white flex items-center justify-center"
-            >
-              <ArrowUp className="w-4 h-4" />
-            </button>
-            <div />
+          <div className="flex gap-2">
             <button
               onClick={() => handleKey('ArrowLeft')}
-              className="p-2.5 rounded-xl bg-slate-800 active:bg-cyan-600 text-slate-200 active:text-white flex items-center justify-center"
+              className="p-2.5 bg-slate-900 active:bg-amber-500 active:text-slate-950 border border-slate-800 rounded-xl text-slate-300 hover:text-white transition-all shadow-sm"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
+
             <button
               onClick={() => handleKey('ArrowDown')}
-              className="p-2.5 rounded-xl bg-slate-800 active:bg-cyan-600 text-slate-200 active:text-white flex items-center justify-center"
+              className="p-2.5 bg-slate-900 active:bg-amber-500 active:text-slate-950 border border-slate-800 rounded-xl text-slate-300 hover:text-white transition-all shadow-sm"
             >
               <ArrowDown className="w-4 h-4" />
             </button>
+
             <button
               onClick={() => handleKey('ArrowRight')}
-              className="p-2.5 rounded-xl bg-slate-800 active:bg-cyan-600 text-slate-200 active:text-white flex items-center justify-center"
+              className="p-2.5 bg-slate-900 active:bg-amber-500 active:text-slate-950 border border-slate-800 rounded-xl text-slate-300 hover:text-white transition-all shadow-sm"
             >
               <ArrowRight className="w-4 h-4" />
             </button>

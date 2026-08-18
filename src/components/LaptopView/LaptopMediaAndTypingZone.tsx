@@ -21,6 +21,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { sounds } from '../../utils/audio';
+import { Language, translations } from '../../utils/i18n';
 import confetti from 'canvas-confetti';
 
 interface LaptopMediaAndTypingZoneProps {
@@ -39,18 +40,30 @@ interface LaptopMediaAndTypingZoneProps {
     timestamp: number;
   };
   peerConnected: boolean;
+  currentLang?: Language;
 }
 
 export const LaptopMediaAndTypingZone: React.FC<LaptopMediaAndTypingZoneProps> = ({
   mediaState,
   keyboardState,
   peerConnected,
+  currentLang = 'en',
 }) => {
+  const t = translations[currentLang] || translations.en;
+
   const [localPlaying, setLocalPlaying] = useState(false);
   const [localVolume, setLocalVolume] = useState(70);
   const [localMuted, setLocalMuted] = useState(false);
   const [currentTrackIdx, setCurrentTrackIdx] = useState(0);
-  const [receivedText, setReceivedText] = useState('Selamat datang di LinkBridge Live Typing Receiver!');
+  const [receivedText, setReceivedText] = useState(
+    currentLang === 'id'
+      ? 'Selamat datang di LinkBridge Live Typing Receiver!'
+      : currentLang === 'zh'
+      ? '欢迎使用 LinkBridge 实时打字接收器！'
+      : currentLang === 'vi'
+      ? 'Chào mừng đến với Bộ nhận gõ phím trực tiếp LinkBridge!'
+      : 'Welcome to LinkBridge Live Typing Stream Receiver!'
+  );
   const [recentKey, setRecentKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -98,26 +111,28 @@ export const LaptopMediaAndTypingZone: React.FC<LaptopMediaAndTypingZoneProps> =
     }
   }, [mediaState.timestamp, mediaState.lastAction]);
 
-  // Sync Keyboard State from HP
+  // Sync Keyboard Live Typing from HP
   useEffect(() => {
     if (keyboardState.timestamp > 0) {
       if (keyboardState.lastTyped) {
-        setReceivedText(keyboardState.lastTyped);
+        setReceivedText((prev) => prev + keyboardState.lastTyped);
+        sounds.playClick();
       }
+
       if (keyboardState.activeKeyAction) {
         setRecentKey(keyboardState.activeKeyAction);
-        setTimeout(() => setRecentKey(null), 1500);
-
-        if (keyboardState.activeKeyAction === 'Enter') {
-          confetti({
-            particleCount: 20,
-            spread: 50,
-            origin: { x: 0.75, y: 0.5 },
-          });
+        const action = keyboardState.activeKeyAction.toLowerCase();
+        if (action === 'enter') {
+          setReceivedText((prev) => prev + '\n');
+        } else if (action === 'backspace') {
+          setReceivedText((prev) => prev.slice(0, -1));
+        } else if (action === 'space') {
+          setReceivedText((prev) => prev + ' ');
         }
+        setTimeout(() => setRecentKey(null), 1000);
       }
     }
-  }, [keyboardState.timestamp, keyboardState.lastTyped, keyboardState.activeKeyAction]);
+  }, [keyboardState.timestamp]);
 
   const handleCopyText = () => {
     navigator.clipboard.writeText(receivedText);
@@ -130,52 +145,37 @@ export const LaptopMediaAndTypingZone: React.FC<LaptopMediaAndTypingZoneProps> =
 
   return (
     <div className="space-y-6">
-      {/* Header Info */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-slate-900/60 border border-slate-800">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/25">
-            <Radio className="w-5 h-5" />
+      {/* Top Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-slate-900/90 to-slate-950 border border-amber-500/25 shadow-lg">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/30">
+            <Keyboard className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-sm font-serif font-bold text-amber-200">
-              Penerima Keyboard & Media Controller (HP ➔ Laptop)
+            <h3 className="font-serif font-bold text-sm text-amber-200">
+              {t.tabKeyboard} (Live Receiver)
             </h3>
             <p className="text-xs text-slate-400">
-              Ketik teks atau tekan tombol media di HP Anda pada tab 'Type & Media' untuk mengontrol pemutar ini
+              {t.mediaPlayerDesc}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {recentKey && (
-            <span className="px-2.5 py-1 rounded-lg bg-amber-500 text-slate-950 font-mono font-bold text-xs animate-bounce shadow-md">
-              Key: {recentKey}
-            </span>
-          )}
-          <span
-            className={`px-3 py-1 rounded-xl text-xs font-bold border flex items-center gap-1.5 ${
-              peerConnected
-                ? 'bg-emerald-950/50 text-emerald-300 border-emerald-500/30'
-                : 'bg-amber-950/50 text-amber-300 border-amber-500/30'
-            }`}
-          >
-            <span
-              className={`w-2 h-2 rounded-full ${
-                peerConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
-              }`}
-            />
-            {peerConnected ? 'HP Tersambung' : 'Menunggu HP'}
-          </span>
-        </div>
+        {recentKey && (
+          <div className="flex items-center gap-2 self-start sm:self-auto px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-mono font-bold animate-bounce">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Key Pressed: {recentKey.toUpperCase()}</span>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Side (7 cols): Interactive Live Media Player Receiver */}
-        <div className="lg:col-span-7 bg-[#0c0d12] border border-amber-500/25 rounded-3xl p-5 shadow-2xl space-y-4 flex flex-col justify-between">
+        {/* Left Side (7 cols): Interactive Media Player Simulator */}
+        <div className="lg:col-span-7 bg-[#0c0d12] border border-amber-500/25 rounded-3xl p-5 shadow-2xl space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
               <Tv className="w-4 h-4 text-amber-400" />
-              Live Media Player Simulator
+              {t.mediaPlayerSim}
             </span>
             <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-slate-400 font-mono">
               Track {currentTrackIdx + 1} of {demoTracks.length}
@@ -247,7 +247,7 @@ export const LaptopMediaAndTypingZone: React.FC<LaptopMediaAndTypingZoneProps> =
                 />
               </div>
               <span className="font-mono text-xs text-amber-300 font-bold">
-                {localMuted ? 'MUTED' : `${localVolume}%`}
+                {localMuted ? t.mute.toUpperCase() : `${localVolume}%`}
               </span>
             </div>
 
@@ -256,19 +256,19 @@ export const LaptopMediaAndTypingZone: React.FC<LaptopMediaAndTypingZoneProps> =
               <button
                 onClick={() => setCurrentTrackIdx((i) => (i - 1 + demoTracks.length) % demoTracks.length)}
                 className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-amber-300 border border-slate-800 transition-colors"
-                title="Previous Track"
+                title={t.prev}
               >
                 <SkipBack className="w-4 h-4" />
               </button>
 
               <button
                 onClick={() => setLocalPlaying(!localPlaying)}
-                className={`p-3 rounded-2xl font-bold shadow-lg transition-all ${
+                className={`p-2.5 rounded-xl border transition-all ${
                   localPlaying
-                    ? 'bg-amber-500 text-slate-950 shadow-amber-500/30'
-                    : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
+                    ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md shadow-amber-500/30 font-bold'
+                    : 'bg-slate-900 text-amber-300 border-slate-800 hover:bg-slate-800'
                 }`}
-                title={localPlaying ? 'Pause' : 'Play'}
+                title={localPlaying ? t.pause : t.play}
               >
                 {localPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 fill-current" />}
               </button>
@@ -276,7 +276,7 @@ export const LaptopMediaAndTypingZone: React.FC<LaptopMediaAndTypingZoneProps> =
               <button
                 onClick={() => setCurrentTrackIdx((i) => (i + 1) % demoTracks.length)}
                 className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-amber-300 border border-slate-800 transition-colors"
-                title="Next Track"
+                title={t.next}
               >
                 <SkipForward className="w-4 h-4" />
               </button>
@@ -289,7 +289,7 @@ export const LaptopMediaAndTypingZone: React.FC<LaptopMediaAndTypingZoneProps> =
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
               <Keyboard className="w-4 h-4 text-amber-400" />
-              Live Typing Stream Receiver
+              {t.liveTypingReceiver}
             </span>
             <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
               <Zap className="w-3 h-3" /> Live Keystrokes
@@ -310,7 +310,7 @@ export const LaptopMediaAndTypingZone: React.FC<LaptopMediaAndTypingZoneProps> =
             </div>
 
             <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-              <span>Status: Siap menerima ketikan dari HP</span>
+              <span>{t.waitingForTyping}</span>
             </div>
           </div>
 
@@ -323,12 +323,12 @@ export const LaptopMediaAndTypingZone: React.FC<LaptopMediaAndTypingZoneProps> =
               {copied ? (
                 <>
                   <Check className="w-4 h-4" />
-                  <span>Tersalin!</span>
+                  <span>{t.copied}</span>
                 </>
               ) : (
                 <>
                   <Copy className="w-4 h-4" />
-                  <span>Salin Teks Masuk</span>
+                  <span>{t.copyIncomingText}</span>
                 </>
               )}
             </button>
@@ -336,7 +336,7 @@ export const LaptopMediaAndTypingZone: React.FC<LaptopMediaAndTypingZoneProps> =
             <button
               onClick={() => setReceivedText('')}
               className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 transition-colors"
-              title="Bersihkan Teks"
+              title={t.clearHistory}
             >
               <RotateCcw className="w-4 h-4" />
             </button>

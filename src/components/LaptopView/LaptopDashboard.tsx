@@ -283,6 +283,7 @@ export const LaptopDashboard: React.FC<LaptopDashboardProps> = ({
             remoteMouse={remoteMouse}
             peerConnected={!!connectedPhone}
             onOpenDesktopAgent={onOpenDesktopAgent}
+            currentLang={currentLang}
           />
         )}
 
@@ -291,6 +292,7 @@ export const LaptopDashboard: React.FC<LaptopDashboardProps> = ({
             mediaState={mediaState}
             keyboardState={keyboardState}
             peerConnected={!!connectedPhone}
+            currentLang={currentLang}
           />
         )}
 
@@ -299,6 +301,7 @@ export const LaptopDashboard: React.FC<LaptopDashboardProps> = ({
             files={files}
             onUploadFile={onUploadFile}
             uploadProgress={uploadProgress}
+            currentLang={currentLang}
           />
         )}
 
@@ -308,6 +311,7 @@ export const LaptopDashboard: React.FC<LaptopDashboardProps> = ({
             onSendClipboard={onSendClipboard}
             notes={notes}
             onUpdateNotes={onUpdateNotes}
+            currentLang={currentLang}
           />
         )}
 
@@ -315,6 +319,7 @@ export const LaptopDashboard: React.FC<LaptopDashboardProps> = ({
           <PresentationViewer
             presentationState={presentationState}
             onSendSlideAction={onSendSlideAction}
+            currentLang={currentLang}
           />
         )}
 
@@ -323,6 +328,7 @@ export const LaptopDashboard: React.FC<LaptopDashboardProps> = ({
             cameraFrame={cameraFrame}
             cameraActive={cameraActive}
             onSendControl={onSendCameraControl}
+            currentLang={currentLang}
           />
         )}
       </div>

@@ -12,18 +12,23 @@ import {
   Zap,
 } from 'lucide-react';
 import { sounds } from '../../utils/audio';
+import { Language, translations } from '../../utils/i18n';
 
 interface PhoneTrackpadProps {
   onSendMouseMove: (dx: number, dy: number) => void;
   onSendMouseClick: (button: 'left' | 'right' | 'middle', isDown?: boolean) => void;
   onSendMouseScroll: (scrollX: number, scrollY: number) => void;
+  currentLang?: Language;
 }
 
 export const PhoneTrackpad: React.FC<PhoneTrackpadProps> = ({
   onSendMouseMove,
   onSendMouseClick,
   onSendMouseScroll,
+  currentLang = 'en',
 }) => {
+  const t = translations[currentLang] || translations.en;
+
   // Sensitivity: Default calibrated to balanced (0.8x)
   const [sensitivity, setSensitivity] = useState<number>(() => {
     const saved = localStorage.getItem('linkbridge_trackpad_sens');
@@ -75,10 +80,7 @@ export const PhoneTrackpad: React.FC<PhoneTrackpadProps> = ({
 
       touchMovedRef.current = true;
 
-      // Dynamic acceleration curve:
-      // Small movements (< 4px) get 0.10 factor for pinpoint precision
-      // Medium movements (4-15px) get 0.15 factor
-      // Fast swipes (> 15px) get 0.20 factor with capping
+      // Dynamic acceleration curve
       let speedFactor = 0.11;
       if (distance > 15) {
         speedFactor = 0.2;
@@ -98,87 +100,67 @@ export const PhoneTrackpad: React.FC<PhoneTrackpadProps> = ({
     [sensitivity, onSendMouseMove]
   );
 
-  // --- Touch Event Handlers for Main Surface ---
+  // --- Touch Event Handlers ---
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     setActiveTouches(e.touches.length);
     touchStartTimeRef.current = Date.now();
     touchMovedRef.current = false;
 
     if (e.touches.length === 1) {
-      const touch = e.touches[0];
-      lastPosRef.current = { x: touch.clientX, y: touch.clientY };
-    } else if (e.touches.length === 2) {
-      const touch1 = e.touches[0];
-      const touch2 = e.touches[1];
       lastPosRef.current = {
-        x: (touch1.clientX + touch2.clientX) / 2,
-        y: (touch1.clientY + touch2.clientY) / 2,
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+      };
+    } else if (e.touches.length === 2) {
+      lastPosRef.current = {
+        x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+        y: (e.touches[0].clientY + e.touches[1].clientY) / 2,
       };
     }
   };
 
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
     if (e.touches.length === 1) {
-      const touch = e.touches[0];
-      processMovement(touch.clientX, touch.clientY);
+      processMovement(e.touches[0].clientX, e.touches[0].clientY);
     } else if (e.touches.length === 2) {
-      // 2-Finger Smooth Vertical Scroll
-      const touch1 = e.touches[0];
-      const touch2 = e.touches[1];
-      const currentMidY = (touch1.clientY + touch2.clientY) / 2;
-
-      if (lastPosRef.current) {
-        const rawDeltaY = currentMidY - lastPosRef.current.y;
-        if (Math.abs(rawDeltaY) > 1.2) {
-          touchMovedRef.current = true;
-          // Natural inverted scroll factor
-          const scrollStep = -rawDeltaY * 1.6 * sensitivity;
-          onSendMouseScroll(0, scrollStep);
-          triggerHaptic(8);
-          lastPosRef.current = {
-            x: (touch1.clientX + touch2.clientX) / 2,
-            y: currentMidY,
-          };
-        }
-      } else {
+      // 2-finger scroll
+      if (!lastPosRef.current) {
         lastPosRef.current = {
-          x: (touch1.clientX + touch2.clientX) / 2,
-          y: currentMidY,
+          x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+          y: (e.touches[0].clientY + e.touches[1].clientY) / 2,
         };
+        return;
+      }
+      const currentY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      const dy = currentY - lastPosRef.current.y;
+      if (Math.abs(dy) > 2) {
+        onSendMouseScroll(0, -dy * 1.5 * sensitivity);
+        lastPosRef.current.y = currentY;
       }
     }
   };
 
   const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
-    setActiveTouches(e.touches.length);
-    const duration = Date.now() - touchStartTimeRef.current;
-
-    // Detect quick Tap (without noticeable drag)
-    if (!touchMovedRef.current && duration < 280) {
-      if (e.changedTouches.length === 1 && activeTouches <= 1) {
-        // 1 Tap -> Left Click
+    const elapsed = Date.now() - touchStartTimeRef.current;
+    if (!touchMovedRef.current && elapsed < 280) {
+      if (activeTouches === 1) {
         onSendMouseClick('left');
-        triggerHaptic(25);
+        triggerHaptic(20);
         sounds.playClick();
-      } else if (e.changedTouches.length === 2 || activeTouches === 2) {
-        // 2 Fingers Tap -> Right Click
+      } else if (activeTouches === 2) {
         onSendMouseClick('right');
-        triggerHaptic(40);
+        triggerHaptic(30);
         sounds.playClick();
       }
     }
 
-    if (e.touches.length === 0) {
-      lastPosRef.current = null;
-    }
+    lastPosRef.current = null;
+    setActiveTouches(e.touches.length);
   };
 
-  // --- Pointer / Mouse fallback for desktop browser testing ---
-  const isPointerDownRef = useRef(false);
-
+  // --- Pointer Fallback for mouse/trackpad simulator ---
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType === 'touch') return; // Handled by TouchEvent
-    isPointerDownRef.current = true;
+    if (e.pointerType === 'touch') return; // Handled by touch events
     touchStartTimeRef.current = Date.now();
     touchMovedRef.current = false;
     lastPosRef.current = { x: e.clientX, y: e.clientY };
@@ -187,83 +169,91 @@ export const PhoneTrackpad: React.FC<PhoneTrackpadProps> = ({
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === 'touch') return;
-    if (!isPointerDownRef.current) return;
-    processMovement(e.clientX, e.clientY);
+    if (e.buttons > 0) {
+      processMovement(e.clientX, e.clientY);
+    }
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === 'touch') return;
-    isPointerDownRef.current = false;
-    const duration = Date.now() - touchStartTimeRef.current;
-    if (!touchMovedRef.current && duration < 250) {
+    const elapsed = Date.now() - touchStartTimeRef.current;
+    if (!touchMovedRef.current && elapsed < 280) {
       onSendMouseClick('left');
+      triggerHaptic(20);
       sounds.playClick();
     }
     lastPosRef.current = null;
+    try {
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch (err) {
+      // ignore
+    }
   };
 
-  // --- Interactive Scroll Bar Strip Handlers ---
+  // --- Dedicated Scroll Strip Drag Interaction ---
   const handleScrollStripPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     setIsScrollingStrip(true);
     scrollStripLastYRef.current = e.clientY;
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    triggerHaptic(20);
-
-    if (scrollStripElRef.current) {
-      const rect = scrollStripElRef.current.getBoundingClientRect();
-      const relativeY = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
-      setScrollThumbPos(relativeY);
-    }
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    triggerHaptic(15);
+    updateScrollThumb(e.clientY);
   };
 
   const handleScrollStripPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isScrollingStrip || scrollStripLastYRef.current === null) return;
-
-    const deltaY = e.clientY - scrollStripLastYRef.current;
-    if (Math.abs(deltaY) > 1) {
+    const dy = e.clientY - scrollStripLastYRef.current;
+    if (Math.abs(dy) >= 1) {
       // Natural scrolling multiplier
-      const scrollStep = deltaY * 2.8 * sensitivity;
-      onSendMouseScroll(0, scrollStep);
-      triggerHaptic(10);
+      onSendMouseScroll(0, dy * 2.8 * sensitivity);
       scrollStripLastYRef.current = e.clientY;
-
-      if (scrollStripElRef.current) {
-        const rect = scrollStripElRef.current.getBoundingClientRect();
-        const relativeY = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
-        setScrollThumbPos(relativeY);
-      }
+      triggerHaptic(10);
+      updateScrollThumb(e.clientY);
     }
   };
 
-  const handleScrollStripPointerUp = () => {
+  const handleScrollStripPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     setIsScrollingStrip(false);
     scrollStripLastYRef.current = null;
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch (err) {
+      // ignore
+    }
+  };
+
+  const updateScrollThumb = (clientY: number) => {
+    if (!scrollStripElRef.current) return;
+    const rect = scrollStripElRef.current.getBoundingClientRect();
+    const relativeY = clientY - rect.top;
+    const percentage = Math.max(10, Math.min(90, (relativeY / rect.height) * 100));
+    setScrollThumbPos(percentage);
   };
 
   const handleStepScroll = (direction: 'up' | 'down') => {
-    const amount = direction === 'up' ? -50 : 50;
-    onSendMouseScroll(0, amount);
+    const scrollAmount = direction === 'up' ? -120 : 120;
+    onSendMouseScroll(0, scrollAmount);
     triggerHaptic(25);
+    sounds.playClick();
+  };
+
+  // Drag Lock Mode (Mouse Down Hold)
+  const toggleDragLock = () => {
+    const nextState = !isDragLock;
+    setIsDragLock(nextState);
+    onSendMouseClick('left', nextState);
+    triggerHaptic(40);
     sounds.playClick();
   };
 
   const handleLeftClick = () => {
     onSendMouseClick('left');
-    triggerHaptic(30);
+    triggerHaptic(25);
     sounds.playClick();
   };
 
   const handleRightClick = () => {
     onSendMouseClick('right');
-    triggerHaptic(45);
-    sounds.playClick();
-  };
-
-  const toggleDragLock = () => {
-    const next = !isDragLock;
-    setIsDragLock(next);
-    onSendMouseClick('left', next);
-    triggerHaptic(50);
+    triggerHaptic(30);
     sounds.playClick();
   };
 
@@ -274,10 +264,10 @@ export const PhoneTrackpad: React.FC<PhoneTrackpadProps> = ({
         <div className="flex items-center gap-2">
           <span className="text-xs font-serif font-bold text-amber-200 flex items-center gap-1.5">
             <MousePointer className="w-3.5 h-3.5 text-amber-400" />
-            Wireless Trackpad
+            {t.trackpadTitle}
           </span>
           <span className="text-[10px] text-amber-400 font-mono font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20">
-            {sensitivity.toFixed(1)}x Sens
+            {sensitivity.toFixed(1)}x {t.sensitivity}
           </span>
         </div>
 
@@ -291,7 +281,7 @@ export const PhoneTrackpad: React.FC<PhoneTrackpadProps> = ({
             }`}
           >
             {isDragLock ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
-            <span className="text-[10px]">{isDragLock ? 'Drag Locked' : 'Drag'}</span>
+            <span className="text-[10px]">{isDragLock ? t.dragLocked : t.dragLock}</span>
           </button>
 
           <button
@@ -314,7 +304,7 @@ export const PhoneTrackpad: React.FC<PhoneTrackpadProps> = ({
           <div className="flex items-center justify-between text-slate-200">
             <span className="flex items-center gap-1.5 font-semibold text-amber-200">
               <Gauge className="w-3.5 h-3.5 text-amber-400" />
-              Kecepatan Kursor (Sensitivity):
+              {t.sensitivity}:
             </span>
             <span className="font-mono text-amber-300 font-bold bg-slate-900 px-2 py-0.5 rounded-lg border border-amber-500/25">
               {sensitivity.toFixed(1)}x
@@ -334,10 +324,10 @@ export const PhoneTrackpad: React.FC<PhoneTrackpadProps> = ({
           {/* Quick Presets */}
           <div className="grid grid-cols-4 gap-1.5 pt-1">
             {[
-              { label: 'Halus (0.5x)', val: 0.5 },
-              { label: 'Normal (0.8x)', val: 0.8 },
-              { label: 'Cepat (1.2x)', val: 1.2 },
-              { label: 'Tinggi (1.6x)', val: 1.6 },
+              { label: t.smoothSens, val: 0.5 },
+              { label: t.normalSens, val: 0.8 },
+              { label: t.fastSens, val: 1.2 },
+              { label: t.highSens, val: 1.6 },
             ].map((p) => (
               <button
                 key={p.val}
@@ -388,10 +378,10 @@ export const PhoneTrackpad: React.FC<PhoneTrackpadProps> = ({
           <div className="text-center pointer-events-none opacity-45 space-y-1.5 px-4">
             <Move className="w-9 h-9 mx-auto text-amber-400 animate-pulse" />
             <p className="text-xs text-amber-100 font-bold tracking-wide">
-              Geser jari di sini untuk mengarahkan kursor
+              {t.touchpadArea}
             </p>
             <p className="text-[10px] text-slate-400 leading-tight">
-              1 Ketukan = Klik Kiri • 2 Jari = Klik Kanan / Scroll
+              {t.trackpadGuide}
             </p>
           </div>
         </div>
@@ -439,7 +429,7 @@ export const PhoneTrackpad: React.FC<PhoneTrackpadProps> = ({
             </div>
 
             <div className="absolute text-[8px] font-extrabold uppercase tracking-widest text-amber-300/80 [writing-mode:vertical-lr] rotate-180 select-none">
-              SCROLL STRIP
+              {t.scroll}
             </div>
           </div>
 
@@ -464,14 +454,14 @@ export const PhoneTrackpad: React.FC<PhoneTrackpadProps> = ({
           onClick={handleLeftClick}
           className="py-3.5 px-4 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 hover:bg-slate-800 active:bg-amber-500 border border-amber-500/25 active:border-amber-400 text-amber-200 active:text-slate-950 font-bold text-xs sm:text-sm transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2"
         >
-          <span>Klik Kiri (Left)</span>
+          <span>{t.leftClick}</span>
         </button>
 
         <button
           onClick={handleRightClick}
           className="py-3.5 px-4 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 hover:bg-slate-800 active:bg-amber-500 border border-amber-500/25 active:border-amber-400 text-amber-200 active:text-slate-950 font-bold text-xs sm:text-sm transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2"
         >
-          <span>Klik Kanan (Right)</span>
+          <span>{t.rightClick}</span>
         </button>
       </div>
     </div>

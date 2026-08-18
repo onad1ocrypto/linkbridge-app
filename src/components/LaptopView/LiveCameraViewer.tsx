@@ -10,18 +10,22 @@ import {
   Eye,
 } from 'lucide-react';
 import { sounds } from '../../utils/audio';
+import { Language, translations } from '../../utils/i18n';
 
 interface LiveCameraViewerProps {
   cameraFrame: string | null;
   cameraActive: boolean;
   onSendControl: (action: 'start' | 'stop' | 'toggle_flash' | 'flip_camera') => void;
+  currentLang?: Language;
 }
 
 export const LiveCameraViewer: React.FC<LiveCameraViewerProps> = ({
   cameraFrame,
   cameraActive,
   onSendControl,
+  currentLang = 'en',
 }) => {
+  const t = translations[currentLang] || translations.en;
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [filterMode, setFilterMode] = useState<'normal' | 'scanner' | 'high_contrast'>('normal');
 
@@ -47,21 +51,21 @@ export const LiveCameraViewer: React.FC<LiveCameraViewerProps> = ({
 
   return (
     <div
-      className={`bg-slate-900/60 border border-slate-800 rounded-2xl p-4 flex flex-col ${
+      className={`bg-[#0e1017] border border-amber-500/20 rounded-3xl p-5 flex flex-col shadow-xl shadow-amber-950/10 ${
         isFullscreen ? 'fixed inset-4 z-50 bg-slate-950/95 max-h-none' : ''
       }`}
     >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
             <Camera className="w-4 h-4" />
           </div>
           <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-              Live Stream Kamera HP / Scanner Dokumen
+            <h4 className="text-xs font-bold uppercase tracking-wider text-amber-200">
+              {t.cameraViewerTitle}
             </h4>
             <p className="text-[11px] text-slate-400">
-              Jadikan kamera HP sebagai webcam nirkabel atau scanner dokumen beresolusi tinggi
+              {t.cameraViewerDesc}
             </p>
           </div>
         </div>
@@ -76,57 +80,61 @@ export const LiveCameraViewer: React.FC<LiveCameraViewerProps> = ({
                     m === 'normal' ? 'scanner' : m === 'scanner' ? 'high_contrast' : 'normal'
                   )
                 }
-                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs flex items-center gap-1 transition-colors"
-                title="Ganti Filter Mode (Normal / Scanner Dokumen / Kontras Tinggi)"
+                className="px-2.5 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs flex items-center gap-1 transition-colors border border-slate-800"
+                title="Filter (Normal / Scanner / Contrast)"
               >
-                <Scan className="w-3.5 h-3.5 text-cyan-400" />
-                <span className="capitalize">{filterMode}</span>
+                <Scan className="w-3.5 h-3.5 text-amber-400" />
+                <span className="capitalize text-[11px]">{filterMode}</span>
               </button>
               <button
                 onClick={handleDownloadSnapshot}
-                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium flex items-center gap-1 transition-all shadow-sm"
+                className="px-3 py-1 rounded-xl bg-gradient-to-r from-amber-600 to-yellow-500 text-slate-950 text-xs font-bold flex items-center gap-1 transition-all shadow-sm"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Simpan Gambar</span>
+                <span>{t.download}</span>
               </button>
             </>
           )}
 
           <button
             onClick={() => setIsFullscreen(!isFullscreen)}
-            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors"
+            className="p-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-amber-300 transition-colors border border-slate-800"
           >
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
         </div>
       </div>
 
-      {/* Video / Snapshot Feed Viewport */}
-      <div className="relative flex-1 min-h-[300px] bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-center overflow-hidden">
+      {/* Video Feed Stage */}
+      <div className="relative w-full h-[400px] bg-slate-950 rounded-2xl border border-amber-500/20 flex items-center justify-center overflow-hidden shadow-inner">
         {cameraFrame ? (
-          <div className="relative w-full h-full flex items-center justify-center p-2">
-            <img
-              src={cameraFrame}
-              alt="Live Feed HP"
-              className="max-h-full max-w-full object-contain rounded-lg shadow-lg transition-all"
-              style={{ filter: getFilterStyle() }}
-            />
-            <div className="absolute top-4 left-4 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-[10px] text-emerald-400 font-medium">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>LIVE FEED DARI HP</span>
+          <img
+            src={cameraFrame}
+            alt="Phone Camera Stream"
+            style={{ filter: getFilterStyle() }}
+            className="w-full h-full object-contain"
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-3 text-slate-500 p-6 text-center">
+            <div className="p-4 rounded-2xl bg-amber-500/5 text-amber-400/50 border border-amber-500/10">
+              <Smartphone className="w-10 h-10 animate-pulse" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-300">
+                {t.cameraOffline}
+              </p>
+              <p className="text-xs text-slate-400 mt-1 max-w-sm">
+                {t.cameraDesc}
+              </p>
             </div>
           </div>
-        ) : (
-          <div className="text-center p-8 max-w-md">
-            <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500 mx-auto mb-3">
-              <Smartphone className="w-6 h-6" />
-            </div>
-            <h5 className="text-xs font-semibold text-slate-300 mb-1">
-              Kamera HP Belum Aktif
-            </h5>
-            <p className="text-[11px] text-slate-400 mb-4">
-              Buka aplikasi di HP, pilih tab <strong>"Kamera Streamer"</strong>, lalu ketuk "Mulai Kamera" untuk menampilkan live feed di sini.
-            </p>
+        )}
+
+        {/* Live Indicator HUD */}
+        {cameraFrame && (
+          <div className="absolute top-3 left-3 bg-red-600/90 text-white font-mono text-[10px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-md">
+            <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+            <span>{t.streamingLive}</span>
           </div>
         )}
       </div>

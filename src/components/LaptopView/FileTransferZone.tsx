@@ -15,18 +15,22 @@ import {
 } from 'lucide-react';
 import { FileTransferItem } from '../../types';
 import { sounds } from '../../utils/audio';
+import { Language, translations } from '../../utils/i18n';
 
 interface FileTransferZoneProps {
   files: FileTransferItem[];
   onUploadFile: (file: File) => Promise<any>;
   uploadProgress: number | null;
+  currentLang?: Language;
 }
 
 export const FileTransferZone: React.FC<FileTransferZoneProps> = ({
   files,
   onUploadFile,
   uploadProgress,
+  currentLang = 'en',
 }) => {
+  const t = translations[currentLang] || translations.en;
   const [isDragging, setIsDragging] = useState(false);
   const [previewFile, setPreviewFile] = useState<FileTransferItem | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -114,16 +118,16 @@ export const FileTransferZone: React.FC<FileTransferZoneProps> = ({
         </div>
 
         <h4 className="text-sm font-serif font-bold text-amber-200 mb-1 tracking-wide">
-          Drag & Drop Files Here or Click to Browse
+          {t.dragDropFiles}
         </h4>
         <p className="text-xs text-slate-400 max-w-md leading-relaxed">
-          High-speed wireless transfer for Photos, 4K Videos, Documents, PDF, Audio, and Android APK packages.
+          {t.browseFiles}
         </p>
 
         {uploadProgress !== null && (
           <div className="w-full max-w-xs mt-4">
             <div className="flex justify-between text-[11px] text-amber-300 font-bold mb-1">
-              <span>Transferring...</span>
+              <span>{t.sendingToLaptop}</span>
               <span>{uploadProgress}%</span>
             </div>
             <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
@@ -140,17 +144,17 @@ export const FileTransferZone: React.FC<FileTransferZoneProps> = ({
       <div>
         <div className="flex items-center justify-between mb-2 px-1">
           <h4 className="text-xs font-serif font-bold uppercase tracking-wider text-amber-200/90">
-            Transferred Files ({files.length})
+            {t.transferHistory} ({files.length})
           </h4>
           <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
             <Sparkles className="w-3 h-3" />
-            <span>Instant Sync</span>
+            <span>{t.autoSync}</span>
           </span>
         </div>
 
         {files.length === 0 ? (
           <div className="p-8 rounded-2xl bg-[#0c0d11]/80 border border-amber-500/15 text-center text-slate-400 text-xs shadow-inner">
-            No files transferred yet. Send files from your Phone or Laptop to start sharing.
+            {t.noFilesYet}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -200,7 +204,7 @@ export const FileTransferZone: React.FC<FileTransferZoneProps> = ({
                     download={file.name}
                     onClick={() => sounds.playClick()}
                     className="p-2 rounded-xl bg-gradient-to-r from-amber-600 to-yellow-500 text-slate-950 font-bold hover:brightness-110 shadow-md shadow-amber-600/20 transition-all"
-                    title="Download"
+                    title={t.download}
                   >
                     <Download className="w-4 h-4" />
                   </a>
@@ -234,7 +238,7 @@ export const FileTransferZone: React.FC<FileTransferZoneProps> = ({
                 className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-yellow-500 text-slate-950 font-bold flex items-center gap-1.5 shadow-md shadow-amber-600/20"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Download</span>
+                <span>{t.download}</span>
               </a>
             </div>
           </div>

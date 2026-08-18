@@ -10,18 +10,22 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { sounds } from '../../utils/audio';
+import { Language, translations } from '../../utils/i18n';
 
 interface PhoneCameraStreamerProps {
   onSendCameraFrame: (frameData: string) => void;
   onSendCameraControl: (action: 'start' | 'stop' | 'toggle_flash' | 'flip_camera') => void;
   onUploadFile: (file: File) => Promise<any>;
+  currentLang?: Language;
 }
 
 export const PhoneCameraStreamer: React.FC<PhoneCameraStreamerProps> = ({
   onSendCameraFrame,
   onSendCameraControl,
   onUploadFile,
+  currentLang = 'en',
 }) => {
+  const t = translations[currentLang] || translations.en;
   const [isStreaming, setIsStreaming] = useState(false);
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
   const [snapshotTaken, setSnapshotTaken] = useState(false);
@@ -119,7 +123,7 @@ export const PhoneCameraStreamer: React.FC<PhoneCameraStreamerProps> = ({
 
     canvas.toBlob(async (blob) => {
       if (blob) {
-        const file = new File([blob], `Kamera_HP_${Date.now()}.jpg`, { type: 'image/jpeg' });
+        const file = new File([blob], `LinkBridge_Camera_${Date.now()}.jpg`, { type: 'image/jpeg' });
         await onUploadFile(file);
         setSnapshotTaken(true);
         triggerHaptic(60);
@@ -138,7 +142,7 @@ export const PhoneCameraStreamer: React.FC<PhoneCameraStreamerProps> = ({
   return (
     <div className="space-y-4 select-none">
       {/* Video Viewfinder Container */}
-      <div className="relative w-full h-[280px] rounded-2xl bg-slate-950 border-2 border-slate-800 overflow-hidden flex items-center justify-center shadow-inner">
+      <div className="relative w-full h-[280px] rounded-3xl bg-slate-950 border-2 border-amber-500/20 overflow-hidden flex items-center justify-center shadow-inner">
         <video
           ref={videoRef}
           playsInline
@@ -150,29 +154,29 @@ export const PhoneCameraStreamer: React.FC<PhoneCameraStreamerProps> = ({
 
         {!isStreaming && (
           <div className="text-center p-6 space-y-2">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
               <Camera className="w-6 h-6" />
             </div>
-            <h4 className="text-sm font-bold text-slate-200">Kamera Nirkabel HP</h4>
-            <p className="text-xs text-slate-400 max-w-xs">
-              Streaming video langsung dari kamera HP Anda ke layar laptop untuk scanner dokumen atau webcam
+            <h4 className="text-sm font-bold text-amber-200">{t.cameraTitle}</h4>
+            <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
+              {t.cameraDesc}
             </p>
           </div>
         )}
 
         {/* Live indicator overlay */}
         {isStreaming && (
-          <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-[10px] text-emerald-400 font-bold">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>STREAMING KE LAPTOP</span>
+          <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-[10px] text-amber-300 font-bold">
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+            <span>{t.streamingLive}</span>
           </div>
         )}
 
         {/* Snapshot Success Toast */}
         {snapshotTaken && (
-          <div className="absolute inset-0 m-auto w-max h-max px-4 py-2 rounded-xl bg-emerald-600/90 text-white text-xs font-bold flex items-center gap-2 shadow-2xl backdrop-blur-sm animate-bounce">
+          <div className="absolute inset-0 m-auto w-max h-max px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-yellow-500 text-slate-950 text-xs font-bold flex items-center gap-2 shadow-2xl backdrop-blur-sm animate-bounce">
             <CheckCircle2 className="w-4 h-4" />
-            <span>Foto Terkirim ke Laptop!</span>
+            <span>{t.snapshotSent}</span>
           </div>
         )}
       </div>
@@ -182,27 +186,27 @@ export const PhoneCameraStreamer: React.FC<PhoneCameraStreamerProps> = ({
         {!isStreaming ? (
           <button
             onClick={() => startCamera()}
-            className="col-span-2 py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/25 transition-all"
+            className="col-span-2 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-600 to-yellow-500 hover:from-amber-500 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-amber-600/25 transition-all"
           >
-            <Play className="w-4 h-4" />
-            <span>Mulai Streaming Kamera</span>
+            <Play className="w-4 h-4 fill-current" />
+            <span>{t.startStreaming}</span>
           </button>
         ) : (
           <>
             <button
               onClick={takeSnapshot}
-              className="py-3.5 px-4 rounded-xl bg-cyan-600 active:bg-cyan-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-600/20"
+              className="py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-600 to-yellow-500 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-600/20"
             >
               <Camera className="w-4 h-4" />
-              <span>Ambil & Kirim Foto</span>
+              <span>{t.takeSnapshot}</span>
             </button>
 
             <button
               onClick={stopCamera}
-              className="py-3.5 px-4 rounded-xl bg-rose-600/20 active:bg-rose-600 text-rose-300 active:text-white border border-rose-500/30 font-bold text-xs flex items-center justify-center gap-2"
+              className="py-3.5 px-4 rounded-2xl bg-rose-950/40 active:bg-rose-900 text-rose-300 active:text-white border border-rose-500/30 font-bold text-xs flex items-center justify-center gap-2"
             >
               <Square className="w-4 h-4" />
-              <span>Hentikan Kamera</span>
+              <span>{t.stopStreaming}</span>
             </button>
           </>
         )}
@@ -215,8 +219,8 @@ export const PhoneCameraStreamer: React.FC<PhoneCameraStreamerProps> = ({
             onClick={flipCamera}
             className="px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 active:bg-slate-800 text-slate-300 text-xs flex items-center gap-2"
           >
-            <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Balik Kamera ({facingMode === 'environment' ? 'Belakang' : 'Depan'})</span>
+            <RefreshCw className="w-3.5 h-3.5 text-amber-400" />
+            <span>{t.flipCamera}</span>
           </button>
         </div>
       )}

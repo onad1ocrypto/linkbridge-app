@@ -26,7 +26,7 @@ export const ApkInstallGuideModal: React.FC<ApkInstallGuideModalProps> = ({
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstalled, setIsInstalled] = useState(false);
 
-  const t = translations[currentLang];
+  const t = translations[currentLang] || translations.en;
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -66,6 +66,7 @@ export const ApkInstallGuideModal: React.FC<ApkInstallGuideModalProps> = ({
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition-colors border border-slate-800"
+          title={t.close}
         >
           <X className="w-4 h-4" />
         </button>
@@ -85,14 +86,14 @@ export const ApkInstallGuideModal: React.FC<ApkInstallGuideModalProps> = ({
         {deferredPrompt && !isInstalled && (
           <div className="mb-4 p-4 rounded-2xl bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-500 text-slate-950 flex items-center justify-between shadow-xl shadow-amber-600/20">
             <div>
-              <p className="font-bold text-sm">One-Click Direct Install Ready</p>
-              <p className="text-xs text-slate-900 font-medium">Install LinkBridge directly to your phone menu</p>
+              <p className="font-bold text-sm">{t.oneClickInstall}</p>
+              <p className="text-xs text-slate-900 font-medium">{t.oneClickDesc}</p>
             </div>
             <button
               onClick={handleNativeInstall}
               className="px-4 py-2 bg-slate-950 hover:bg-slate-900 text-amber-300 font-bold rounded-xl text-xs shadow-lg transition-all"
             >
-              Install Now
+              {t.installNow}
             </button>
           </div>
         )}
