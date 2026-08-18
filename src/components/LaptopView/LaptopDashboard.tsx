@@ -100,7 +100,9 @@ export const LaptopDashboard: React.FC<LaptopDashboardProps> = ({
   currentLang = 'en',
 }) => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('trackpad');
-  const connectedPhone = peerDevices.find((d) => d.deviceType === 'phone');
+  const connectedPhone =
+    peerDevices.find((d) => d.deviceType === 'phone' || d.deviceType === 'simulator') ||
+    peerDevices[0];
 
   const t = translations[currentLang] || translations.en;
 

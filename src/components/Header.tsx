@@ -25,6 +25,7 @@ interface HeaderProps {
   role: DeviceType;
   onRoleChange: (role: DeviceType) => void;
   roomId: string;
+  shareUrl?: string;
   isConnected: boolean;
   latency: number;
   devices: DeviceInfo[];
@@ -41,6 +42,7 @@ export const Header: React.FC<HeaderProps> = ({
   role,
   onRoleChange,
   roomId,
+  shareUrl,
   isConnected,
   latency,
   peerDevices,
@@ -64,7 +66,9 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   const copyShareLink = () => {
-    const url = `${window.location.origin}${window.location.pathname}?room=${roomId}&role=phone`;
+    const url =
+      shareUrl ||
+      `${window.location.origin}${window.location.pathname}?room=${roomId}&role=phone`;
     navigator.clipboard.writeText(url);
     setCopiedLink(true);
     sounds.playClick();

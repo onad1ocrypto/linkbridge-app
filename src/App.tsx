@@ -199,6 +199,7 @@ export default function App() {
         role={bridge.role}
         onRoleChange={bridge.changeRole}
         roomId={bridge.roomId}
+        shareUrl={bridge.shareUrl}
         isConnected={bridge.isConnected}
         latency={bridge.latency}
         devices={bridge.devices}

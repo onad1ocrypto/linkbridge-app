@@ -83,7 +83,9 @@ export const PhoneDashboard: React.FC<PhoneDashboardProps> = ({
   const [pinInput, setPinInput] = useState('');
 
   const t = translations[currentLang];
-  const connectedLaptop = peerDevices.find((d) => d.deviceType === 'laptop');
+  const connectedLaptop =
+    peerDevices.find((d) => d.deviceType === 'laptop' || d.deviceType === 'simulator') ||
+    peerDevices[0];
 
   const handleJoinPin = (e: React.FormEvent) => {
     e.preventDefault();
