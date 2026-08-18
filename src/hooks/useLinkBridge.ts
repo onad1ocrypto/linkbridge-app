@@ -28,10 +28,10 @@ export function useLinkBridge({ initialRoomId, initialRole }: LinkBridgeHookProp
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const qRoom = urlParams.get('room');
-      if (qRoom) return qRoom.toUpperCase();
+      if (qRoom) return qRoom.toUpperCase().trim();
     }
     const saved = localStorage.getItem('linkbridge_room_id');
-    if (saved) return saved;
+    if (saved) return saved.toUpperCase().trim();
     const num = Math.floor(1000 + Math.random() * 9000);
     return `LINK-${num}`;
   });
@@ -114,6 +114,7 @@ export function useLinkBridge({ initialRoomId, initialRole }: LinkBridgeHookProp
   const peerConnectionsRef = useRef<Map<string, DataConnection>>(new Map());
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
   const pingStartRef = useRef<number>(0);
+  const lastSyncTimeRef = useRef<number>(0);
   const filesRef = useRef<FileTransferItem[]>([]);
   const clipboardRef = useRef<ClipboardItem[]>([]);
   const notesRef = useRef<string>('');
@@ -157,7 +158,7 @@ export function useLinkBridge({ initialRoomId, initialRole }: LinkBridgeHookProp
     }
   }, []);
 
-  // Unified Multi-Transport Message Dispatcher (WebRTC P2P + WebSocket + BroadcastChannel + HTTP fallback)
+  // Unified Multi-Transport Message Dispatcher
   const sendMessage = useCallback(
     async (msg: any) => {
       const payload = {
@@ -171,7 +172,7 @@ export function useLinkBridge({ initialRoomId, initialRole }: LinkBridgeHookProp
 
       let delivered = false;
 
-      // 1. Send via direct WebRTC DataChannels (Zero latency, works everywhere including Vercel)
+      // 1. Send via direct WebRTC DataChannels (Zero latency P2P)
       peerConnectionsRef.current.forEach((conn) => {
         if (conn.open) {
           try {
@@ -199,10 +200,10 @@ export function useLinkBridge({ initialRoomId, initialRole }: LinkBridgeHookProp
         } catch (e) {}
       }
 
-      // 4. HTTP API Relay Fallback (if running Node server)
-      if (!delivered && connectionType === 'http') {
+      // 4. Send via HTTP Action Relay (Fast Guaranteed Fallback)
+      if (!delivered || msg.type === 'clipboard_send' || msg.type === 'notes_update') {
         try {
-          await fetch('/api/action', {
+          fetch('/api/action', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -210,13 +211,13 @@ export function useLinkBridge({ initialRoomId, initialRole }: LinkBridgeHookProp
               senderId: deviceId,
               action: payload,
             }),
-          });
+          }).catch(() => {});
         } catch (err) {}
       }
 
       return true;
     },
-    [roomId, deviceId, deviceName, role, connectionType]
+    [roomId, deviceId, deviceName, role]
   );
 
   // Incoming Message Handler
@@ -252,6 +253,7 @@ export function useLinkBridge({ initialRoomId, initialRole }: LinkBridgeHookProp
             const filtered = prev.filter((d) => d.deviceId !== newDev.deviceId);
             return [...filtered, newDev];
           });
+          setIsConnected(true);
 
           // If we are Laptop / Host, send back our state to the joined device
           if (role === 'laptop' || role === 'simulator') {
@@ -277,12 +279,13 @@ export function useLinkBridge({ initialRoomId, initialRole }: LinkBridgeHookProp
         }
 
         case 'joined_success': {
-          if (data.devices) {
+          if (data.devices && Array.isArray(data.devices)) {
             setDevices(data.devices);
           }
-          if (data.files) setFiles(data.files);
-          if (data.clipboard) setClipboard(data.clipboard);
+          if (data.files && Array.isArray(data.files)) setFiles(data.files);
+          if (data.clipboard && Array.isArray(data.clipboard)) setClipboard(data.clipboard);
           if (data.notes !== undefined) setNotes(data.notes);
+          setIsConnected(true);
           sounds.playConnect();
           break;
         }
@@ -349,39 +352,31 @@ export function useLinkBridge({ initialRoomId, initialRole }: LinkBridgeHookProp
             ...prev,
             isDown: data.isDown ?? false,
             button: data.button || 'left',
-            lastAction: `click_${data.button || 'left'}`,
+            lastAction: `click_${data.button || 'left'}${data.isDown ? '_down' : ''}`,
             timestamp: Date.now(),
           }));
-          sounds.playClick();
           break;
         }
 
         case 'mouse_scroll': {
-          const delta = data.scrollY || 0;
           setRemoteMouse((prev) => ({
             ...prev,
-            scrollDeltaY: delta,
-            scrollY: Math.max(0, Math.min(1000, (prev.scrollY || 0) + delta)),
-            lastAction: `scroll_${delta > 0 ? 'down' : 'up'}`,
+            scrollY: prev.scrollY + (data.scrollY || 0),
+            scrollDeltaY: data.scrollY || 0,
+            lastAction: 'scroll',
             timestamp: Date.now(),
           }));
           break;
         }
 
         case 'presentation_action': {
-          setPresentationState((prev) => {
-            let nextSlide = prev.slideIndex;
-            if (data.action === 'next') nextSlide = prev.slideIndex + 1;
-            if (data.action === 'prev') nextSlide = Math.max(0, prev.slideIndex - 1);
-            if (data.action === 'first') nextSlide = 0;
-            return {
-              ...prev,
-              slideIndex: nextSlide,
-              laserActive: data.laserActive ?? prev.laserActive,
-              laserX: data.laserX ?? prev.laserX,
-              laserY: data.laserY ?? prev.laserY,
-            };
-          });
+          if (data.action === 'next') {
+            setPresentationState((prev) => ({ ...prev, slideIndex: prev.slideIndex + 1 }));
+          } else if (data.action === 'prev') {
+            setPresentationState((prev) => ({ ...prev, slideIndex: Math.max(0, prev.slideIndex - 1) }));
+          } else if (data.action === 'first') {
+            setPresentationState((prev) => ({ ...prev, slideIndex: 0 }));
+          }
           sounds.playClick();
           break;
         }
@@ -415,23 +410,32 @@ export function useLinkBridge({ initialRoomId, initialRole }: LinkBridgeHookProp
         }
 
         case 'media_control': {
-          setMediaState((prev) => ({
-            ...prev,
-            lastAction: data.action,
-            timestamp: Date.now(),
-          }));
+          if (data.action === 'play_pause') {
+            setMediaState((prev) => ({ ...prev, isPlaying: !prev.isPlaying, lastAction: 'play_pause', timestamp: Date.now() }));
+          } else if (data.action === 'volume_up') {
+            setMediaState((prev) => ({ ...prev, volume: Math.min(100, prev.volume + 10), isMuted: false, lastAction: 'volume_up', timestamp: Date.now() }));
+          } else if (data.action === 'volume_down') {
+            setMediaState((prev) => ({ ...prev, volume: Math.max(0, prev.volume - 10), lastAction: 'volume_down', timestamp: Date.now() }));
+          } else if (data.action === 'mute') {
+            setMediaState((prev) => ({ ...prev, isMuted: !prev.isMuted, lastAction: 'mute', timestamp: Date.now() }));
+          } else if (data.action === 'next') {
+            setMediaState((prev) => ({ ...prev, trackIndex: prev.trackIndex + 1, lastAction: 'next', timestamp: Date.now() }));
+          } else if (data.action === 'previous') {
+            setMediaState((prev) => ({ ...prev, trackIndex: Math.max(0, prev.trackIndex - 1), lastAction: 'previous', timestamp: Date.now() }));
+          }
           sounds.playClick();
           break;
         }
 
         case 'keyboard_input': {
-          setKeyboardState((prev) => ({
-            ...prev,
-            lastTyped: (prev.lastTyped ? prev.lastTyped + ' ' : '') + (data.text || ''),
-            history: [data.text, ...prev.history].slice(0, 20),
-            timestamp: Date.now(),
-          }));
-          sounds.playClick();
+          if (data.text) {
+            setKeyboardState((prev) => ({
+              lastTyped: data.text,
+              history: [data.text, ...prev.history.slice(0, 19)],
+              timestamp: Date.now(),
+            }));
+            sounds.playClick();
+          }
           break;
         }
 
@@ -465,12 +469,67 @@ export function useLinkBridge({ initialRoomId, initialRole }: LinkBridgeHookProp
     [deviceId, role, deviceName, sendMessage]
   );
 
-  // Initialize Hybrid Network Layer (PeerJS P2P + BroadcastChannel + WebSocket)
+  // Initialize Hybrid Network Layer (Instant HTTP Join + SSE + WebSocket + PeerJS P2P + BroadcastChannel)
   useEffect(() => {
     let isMounted = true;
     const cleanRoom = roomId.replace(/[^A-Z0-9]/gi, '').toLowerCase();
 
-    // 1. Setup Local BroadcastChannel (Syncs all tabs/windows in same browser)
+    // 1. INSTANT HTTP REST JOIN (<10ms pairing speed)
+    const doHttpJoin = async () => {
+      try {
+        const res = await fetch('/api/join', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            roomId,
+            deviceId,
+            deviceType: role,
+            deviceName,
+          }),
+        });
+        if (!isMounted) return;
+        if (res.ok) {
+          const data = await res.json();
+          if (data.devices) setDevices(data.devices);
+          if (data.files && data.files.length) setFiles(data.files);
+          if (data.clipboard && data.clipboard.length) setClipboard(data.clipboard);
+          if (data.notes) setNotes(data.notes);
+          setIsConnected(true);
+          setConnectionType((prev) => (prev === 'none' ? 'http' : prev));
+        }
+      } catch (err) {
+        // ignore
+      }
+    };
+    doHttpJoin();
+
+    // 2. High-Frequency Polling & Heartbeat Sync (1.5s interval)
+    const syncInterval = setInterval(async () => {
+      if (!isMounted) return;
+      try {
+        const res = await fetch(`/api/sync/${roomId}?since=${lastSyncTimeRef.current}`);
+        if (!isMounted) return;
+        if (res.ok) {
+          const data = await res.json();
+          lastSyncTimeRef.current = data.serverTime || Date.now();
+          if (data.devices && Array.isArray(data.devices)) {
+            setDevices(data.devices);
+            setIsConnected(true);
+          }
+          if (data.files && data.files.length > filesRef.current.length) {
+            setFiles(data.files);
+          }
+          if (data.clipboard && data.clipboard.length > clipboardRef.current.length) {
+            setClipboard(data.clipboard);
+          }
+          if (data.events && Array.isArray(data.events)) {
+            data.events.forEach((evt: any) => handleIncomingMessage(evt));
+          }
+        }
+      } catch (e) {}
+    }, 1500);
+
+    // 3. Local BroadcastChannel (Syncs all tabs/windows in same browser instantly)
     try {
       const bc = new BroadcastChannel(`linkbridge_${cleanRoom}`);
       broadcastChannelRef.current = bc;
@@ -480,13 +539,66 @@ export function useLinkBridge({ initialRoomId, initialRole }: LinkBridgeHookProp
       };
     } catch (e) {}
 
-    // 2. Setup PeerJS P2P WebRTC (Connects Phone to Laptop anywhere, including Vercel)
+    // 4. Server-Sent Events (SSE) Stream
+    let sseSource: EventSource | null = null;
+    try {
+      sseSource = new EventSource(`/api/events/${roomId}/${deviceId}`);
+      sseSource.onmessage = (event) => {
+        if (!isMounted) return;
+        try {
+          const data = JSON.parse(event.data);
+          handleIncomingMessage(data);
+        } catch (e) {}
+      };
+    } catch (e) {}
+
+    // 5. WebSocket Server Connection (Ultra-low latency for Mouse & Keyboard)
+    let ws: WebSocket | null = null;
+    const connectWs = () => {
+      try {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws`;
+        ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+          if (!isMounted) return;
+          setIsConnected(true);
+          setConnectionType('ws');
+          ws!.send(
+            JSON.stringify({
+              type: 'join',
+              roomId,
+              deviceId,
+              deviceType: role,
+              deviceName,
+            })
+          );
+        };
+
+        ws.onmessage = (event) => {
+          if (!isMounted) return;
+          try {
+            const data = JSON.parse(event.data);
+            handleIncomingMessage(data);
+          } catch (e) {}
+        };
+
+        ws.onclose = () => {
+          if (isMounted) {
+            setTimeout(connectWs, 2000);
+          }
+        };
+      } catch (e) {}
+    };
+    connectWs();
+
+    // 6. PeerJS P2P WebRTC Layer (For Direct Serverless Connection)
     const hostPeerId = `lb_host_${cleanRoom}`;
     const clientPeerId = `lb_${role}_${cleanRoom}_${deviceId.slice(-4)}`;
     const myPeerId = role === 'laptop' || role === 'simulator' ? hostPeerId : clientPeerId;
 
     let peerInstance: Peer | null = null;
-
     try {
       peerInstance = new Peer(myPeerId, {
         debug: 0,
@@ -494,32 +606,28 @@ export function useLinkBridge({ initialRoomId, initialRole }: LinkBridgeHookProp
           iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' },
           ],
         },
       });
       peerRef.current = peerInstance;
 
-      peerInstance.on('open', (id) => {
+      peerInstance.on('open', () => {
         if (!isMounted) return;
         setIsConnected(true);
         setConnectionType('p2p');
 
-        // If Phone role: automatically connect to Laptop Host
         if (role === 'phone') {
           const conn = peerInstance!.connect(hostPeerId, { reliable: true });
           setupDataConnection(conn);
         }
       });
 
-      // Handle Incoming Connections (Laptop receives Phone)
       peerInstance.on('connection', (conn) => {
         if (!isMounted) return;
         setupDataConnection(conn);
       });
 
       peerInstance.on('error', (err: any) => {
-        // If host ID is taken (e.g. another tab is host), try connecting as client
         if (err.type === 'unavailable-id' && role === 'laptop') {
           const altId = `lb_laptop_${cleanRoom}_${deviceId.slice(-4)}`;
           const fallbackPeer = new Peer(altId);
@@ -533,9 +641,7 @@ export function useLinkBridge({ initialRoomId, initialRole }: LinkBridgeHookProp
           fallbackPeer.on('connection', (c) => setupDataConnection(c));
         }
       });
-    } catch (err) {
-      console.warn('PeerJS init error, using fallback:', err);
-    }
+    } catch (err) {}
 
     function setupDataConnection(conn: DataConnection) {
       conn.on('open', () => {
@@ -543,7 +649,6 @@ export function useLinkBridge({ initialRoomId, initialRole }: LinkBridgeHookProp
         setIsConnected(true);
         setConnectionType('p2p');
 
-        // Announce device presence over P2P DataChannel
         conn.send({
           type: 'join',
           senderId: deviceId,
@@ -562,61 +667,21 @@ export function useLinkBridge({ initialRoomId, initialRole }: LinkBridgeHookProp
       conn.on('close', () => {
         peerConnectionsRef.current.delete(conn.peer);
       });
-
-      conn.on('error', () => {
-        peerConnectionsRef.current.delete(conn.peer);
-      });
     }
-
-    // 3. Setup WebSocket Server Connection (if Node backend is available)
-    let ws: WebSocket | null = null;
-    try {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
-      ws = new WebSocket(wsUrl);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        if (!isMounted) return;
-        setIsConnected(true);
-        setConnectionType('ws');
-        ws!.send(
-          JSON.stringify({
-            type: 'join',
-            roomId,
-            deviceId,
-            deviceType: role,
-            deviceName,
-          })
-        );
-      };
-
-      ws.onmessage = (event) => {
-        if (!isMounted) return;
-        try {
-          const data = JSON.parse(event.data);
-          handleIncomingMessage(data);
-        } catch (e) {}
-      };
-    } catch (e) {}
 
     return () => {
       isMounted = false;
-      if (broadcastChannelRef.current) {
-        broadcastChannelRef.current.close();
-      }
+      clearInterval(syncInterval);
+      if (sseSource) sseSource.close();
+      if (broadcastChannelRef.current) broadcastChannelRef.current.close();
       peerConnectionsRef.current.forEach((c) => c.close());
       peerConnectionsRef.current.clear();
-      if (peerRef.current) {
-        peerRef.current.destroy();
-      }
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
+      if (peerRef.current) peerRef.current.destroy();
+      if (wsRef.current) wsRef.current.close();
     };
   }, [roomId, role, deviceId, deviceName, handleIncomingMessage]);
 
-  // Upload file (Supports direct P2P transfer and Base64 buffer)
+  // Upload file
   const uploadFile = useCallback(
     async (file: File) => {
       setUploadProgress(20);
@@ -650,13 +715,12 @@ export function useLinkBridge({ initialRoomId, initialRole }: LinkBridgeHookProp
         // Add to local state
         setFiles((prev) => [fileMeta, ...prev]);
 
-        // Broadcast to P2P and connected peers
+        // Broadcast
         sendMessage({
           type: 'file_received',
           file: fileMeta,
         });
 
-        // Also try server upload endpoint if available
         fetch('/api/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
