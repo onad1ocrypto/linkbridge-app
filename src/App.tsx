@@ -10,6 +10,7 @@ import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { PairingModal } from './components/PairingModal';
 import { ApkInstallGuideModal } from './components/ApkInstallGuideModal';
+import { DesktopAgentModal } from './components/DesktopAgentModal';
 import { LaptopDashboard } from './components/LaptopView/LaptopDashboard';
 import { PhoneDashboard } from './components/PhoneView/PhoneDashboard';
 import { SimulatorView } from './components/SimulatorView';
@@ -18,6 +19,7 @@ import { Language } from './utils/i18n';
 export default function App() {
   const [isPairingOpen, setIsPairingOpen] = useState(false);
   const [isApkGuideOpen, setIsApkGuideOpen] = useState(false);
+  const [isDesktopAgentOpen, setIsDesktopAgentOpen] = useState(false);
   const [currentLang, setCurrentLang] = useState<Language>(() => {
     try {
       const saved = localStorage.getItem('linkbridge_lang');
@@ -158,6 +160,7 @@ export default function App() {
     onSendCameraControl: handleSendCameraControl,
     onOpenPairing: () => setIsPairingOpen(true),
     onOpenApkGuide: () => setIsApkGuideOpen(true),
+    onOpenDesktopAgent: () => setIsDesktopAgentOpen(true),
     onPingPeers: bridge.sendPingAlert,
     currentLang,
   };
@@ -204,6 +207,7 @@ export default function App() {
         onLanguageChange={handleLanguageChange}
         onOpenPairing={() => setIsPairingOpen(true)}
         onOpenApkGuide={() => setIsApkGuideOpen(true)}
+        onOpenDesktopAgent={() => setIsDesktopAgentOpen(true)}
         onPingPeers={bridge.sendPingAlert}
       />
 
@@ -240,6 +244,14 @@ export default function App() {
       <ApkInstallGuideModal
         isOpen={isApkGuideOpen}
         onClose={() => setIsApkGuideOpen(false)}
+        currentLang={currentLang}
+      />
+
+      {/* Desktop Native OS Remote Mouse Agent Modal */}
+      <DesktopAgentModal
+        isOpen={isDesktopAgentOpen}
+        onClose={() => setIsDesktopAgentOpen(false)}
+        roomId={bridge.roomId}
         currentLang={currentLang}
       />
     </div>

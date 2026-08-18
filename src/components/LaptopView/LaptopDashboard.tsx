@@ -70,6 +70,7 @@ interface LaptopDashboardProps {
   onSendCameraControl: (action: 'start' | 'stop' | 'toggle_flash' | 'flip_camera') => void;
   onOpenPairing: () => void;
   onOpenApkGuide: () => void;
+  onOpenDesktopAgent?: () => void;
   onPingPeers: () => void;
   currentLang?: Language;
 }
@@ -94,6 +95,7 @@ export const LaptopDashboard: React.FC<LaptopDashboardProps> = ({
   onSendCameraControl,
   onOpenPairing,
   onOpenApkGuide,
+  onOpenDesktopAgent,
   onPingPeers,
   currentLang = 'en',
 }) => {
@@ -280,6 +282,7 @@ export const LaptopDashboard: React.FC<LaptopDashboardProps> = ({
           <RemoteWorkspaceCanvas
             remoteMouse={remoteMouse}
             peerConnected={!!connectedPhone}
+            onOpenDesktopAgent={onOpenDesktopAgent}
           />
         )}
 

@@ -14,6 +14,7 @@ import {
   Check,
   Globe,
   BellRing,
+  Cpu,
 } from 'lucide-react';
 import { DeviceType, DeviceInfo } from '../types';
 import { sounds } from '../utils/audio';
@@ -32,6 +33,7 @@ interface HeaderProps {
   onLanguageChange: (lang: Language) => void;
   onOpenPairing: () => void;
   onOpenApkGuide: () => void;
+  onOpenDesktopAgent?: () => void;
   onPingPeers: () => void;
 }
 
@@ -46,6 +48,7 @@ export const Header: React.FC<HeaderProps> = ({
   onLanguageChange,
   onOpenPairing,
   onOpenApkGuide,
+  onOpenDesktopAgent,
   onPingPeers,
 }) => {
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -246,6 +249,18 @@ export const Header: React.FC<HeaderProps> = ({
             </>
           )}
         </button>
+
+        {/* Native OS Agent Modal Button */}
+        {onOpenDesktopAgent && (
+          <button
+            onClick={onOpenDesktopAgent}
+            className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs text-amber-300 flex items-center gap-1.5 transition-all font-semibold shadow-sm"
+            title="Native OS Remote Mouse Companion"
+          >
+            <Cpu className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden md:inline">OS Mouse</span>
+          </button>
+        )}
 
         {/* APK / PWA Install Guide */}
         <button

@@ -29,11 +29,13 @@ interface RemoteWorkspaceCanvasProps {
     timestamp: number;
   };
   peerConnected: boolean;
+  onOpenDesktopAgent?: () => void;
 }
 
 export const RemoteWorkspaceCanvas: React.FC<RemoteWorkspaceCanvasProps> = ({
   remoteMouse,
   peerConnected,
+  onOpenDesktopAgent,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollableContentRef = useRef<HTMLDivElement>(null);
@@ -156,6 +158,24 @@ export const RemoteWorkspaceCanvas: React.FC<RemoteWorkspaceCanvasProps> = ({
           </span>
         </div>
       </div>
+
+      {/* OS Level Remote Mouse Helper Prompt */}
+      {onOpenDesktopAgent && (
+        <div className="mb-3 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-amber-400 shrink-0" />
+            <span className="text-xs text-amber-200">
+              <strong>Ingin mengontrol kursor fisik OS di seluruh Windows/Mac (Game, PPT, Desktop)?</strong>
+            </span>
+          </div>
+          <button
+            onClick={onOpenDesktopAgent}
+            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-600 to-yellow-500 hover:from-amber-500 text-slate-950 text-xs font-bold transition-all shadow-md shadow-amber-600/20 self-start sm:self-auto shrink-0"
+          >
+            Aktifkan Native OS Agent
+          </button>
+        </div>
+      )}
 
       {/* Main Virtual Stage with Real Scrollable Feed */}
       <div
