@@ -92,6 +92,22 @@ export function useLinkBridge({ initialRoomId, initialRole }: LinkBridgeHookProp
   const [cameraActive, setCameraActive] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
+  const [mediaState, setMediaState] = useState<{
+    isPlaying: boolean;
+    volume: number;
+    isMuted: boolean;
+    trackIndex: number;
+    lastAction?: string;
+    timestamp: number;
+  }>({ isPlaying: false, volume: 70, isMuted: false, trackIndex: 0, timestamp: 0 });
+
+  const [keyboardState, setKeyboardState] = useState<{
+    lastTyped: string;
+    activeKeyAction?: string;
+    history: string[];
+    timestamp: number;
+  }>({ lastTyped: '', history: [], timestamp: 0 });
+
   // References for Multi-Transport Networking
   const wsRef = useRef<WebSocket | null>(null);
   const peerRef = useRef<Peer | null>(null);
@@ -395,6 +411,38 @@ export function useLinkBridge({ initialRoomId, initialRole }: LinkBridgeHookProp
           } else if (data.action === 'start') {
             setCameraActive(true);
           }
+          break;
+        }
+
+        case 'media_control': {
+          setMediaState((prev) => ({
+            ...prev,
+            lastAction: data.action,
+            timestamp: Date.now(),
+          }));
+          sounds.playClick();
+          break;
+        }
+
+        case 'keyboard_input': {
+          setKeyboardState((prev) => ({
+            ...prev,
+            lastTyped: (prev.lastTyped ? prev.lastTyped + ' ' : '') + (data.text || ''),
+            history: [data.text, ...prev.history].slice(0, 20),
+            timestamp: Date.now(),
+          }));
+          sounds.playClick();
+          break;
+        }
+
+        case 'key_action': {
+          setKeyboardState((prev) => ({
+            ...prev,
+            activeKeyAction: data.key,
+            lastTyped: data.key === 'Backspace' ? prev.lastTyped.slice(0, -1) : prev.lastTyped,
+            timestamp: Date.now(),
+          }));
+          sounds.playClick();
           break;
         }
 
@@ -715,6 +763,8 @@ export function useLinkBridge({ initialRoomId, initialRole }: LinkBridgeHookProp
     sendMessage,
     remoteMouse,
     presentationState,
+    mediaState,
+    keyboardState,
     cameraFrame,
     cameraActive,
   };

@@ -13,12 +13,14 @@ import {
   Download,
   Share2,
   Sparkles,
+  Keyboard,
 } from 'lucide-react';
 import { FileTransferZone } from './FileTransferZone';
 import { SharedClipboardZone } from './SharedClipboardZone';
 import { RemoteWorkspaceCanvas } from './RemoteWorkspaceCanvas';
 import { LiveCameraViewer } from './LiveCameraViewer';
 import { PresentationViewer } from './PresentationViewer';
+import { LaptopMediaAndTypingZone } from './LaptopMediaAndTypingZone';
 import { DeviceInfo, FileTransferItem, ClipboardItem, ActiveTab } from '../../types';
 import { Language, translations } from '../../utils/i18n';
 
@@ -38,6 +40,8 @@ interface LaptopDashboardProps {
     isDown: boolean;
     button?: string;
     lastAction?: string;
+    scrollY: number;
+    scrollDeltaY?: number;
     timestamp: number;
   };
   presentationState: {
@@ -47,6 +51,20 @@ interface LaptopDashboardProps {
     laserY: number;
   };
   onSendSlideAction: (action: 'next' | 'prev' | 'first') => void;
+  mediaState?: {
+    isPlaying: boolean;
+    volume: number;
+    isMuted: boolean;
+    trackIndex: number;
+    lastAction?: string;
+    timestamp: number;
+  };
+  keyboardState?: {
+    lastTyped: string;
+    activeKeyAction?: string;
+    history: string[];
+    timestamp: number;
+  };
   cameraFrame: string | null;
   cameraActive: boolean;
   onSendCameraControl: (action: 'start' | 'stop' | 'toggle_flash' | 'flip_camera') => void;
@@ -69,6 +87,8 @@ export const LaptopDashboard: React.FC<LaptopDashboardProps> = ({
   remoteMouse,
   presentationState,
   onSendSlideAction,
+  mediaState = { isPlaying: false, volume: 70, isMuted: false, trackIndex: 0, timestamp: 0 },
+  keyboardState = { lastTyped: '', history: [], timestamp: 0 },
   cameraFrame,
   cameraActive,
   onSendCameraControl,
@@ -77,10 +97,10 @@ export const LaptopDashboard: React.FC<LaptopDashboardProps> = ({
   onPingPeers,
   currentLang = 'en',
 }) => {
-  const [activeTab, setActiveTab] = useState<ActiveTab>('files');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('trackpad');
   const connectedPhone = peerDevices.find((d) => d.deviceType === 'phone');
 
-  const t = translations[currentLang];
+  const t = translations[currentLang] || translations.en;
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 py-6 space-y-6">
@@ -179,8 +199,32 @@ export const LaptopDashboard: React.FC<LaptopDashboardProps> = ({
         </div>
       </div>
 
-      {/* Feature Navigation Tabs */}
+      {/* Feature Navigation Tabs (Now Fully Aligned with HP Features!) */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-amber-950/30 scrollbar-none">
+        <button
+          onClick={() => setActiveTab('trackpad')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            activeTab === 'trackpad'
+              ? 'bg-gradient-to-r from-amber-600 to-yellow-500 text-slate-950 shadow-md shadow-amber-600/20'
+              : 'text-slate-400 hover:text-slate-200 bg-slate-900/60 hover:bg-slate-800 border border-slate-800/80'
+          }`}
+        >
+          <MousePointer2 className="w-4 h-4" />
+          <span>{t.tabTrackpad}</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('media')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            activeTab === 'media'
+              ? 'bg-gradient-to-r from-amber-600 to-yellow-500 text-slate-950 shadow-md shadow-amber-600/20'
+              : 'text-slate-400 hover:text-slate-200 bg-slate-900/60 hover:bg-slate-800 border border-slate-800/80'
+          }`}
+        >
+          <Keyboard className="w-4 h-4" />
+          <span>{t.tabKeyboard || 'Type & Media'}</span>
+        </button>
+
         <button
           onClick={() => setActiveTab('files')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
@@ -206,15 +250,15 @@ export const LaptopDashboard: React.FC<LaptopDashboardProps> = ({
         </button>
 
         <button
-          onClick={() => setActiveTab('trackpad')}
+          onClick={() => setActiveTab('presentation')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-            activeTab === 'trackpad'
+            activeTab === 'presentation'
               ? 'bg-gradient-to-r from-amber-600 to-yellow-500 text-slate-950 shadow-md shadow-amber-600/20'
               : 'text-slate-400 hover:text-slate-200 bg-slate-900/60 hover:bg-slate-800 border border-slate-800/80'
           }`}
         >
-          <MousePointer2 className="w-4 h-4" />
-          <span>{t.tabTrackpad}</span>
+          <Presentation className="w-4 h-4" />
+          <span>{t.tabPresentation}</span>
         </button>
 
         <button
@@ -228,22 +272,25 @@ export const LaptopDashboard: React.FC<LaptopDashboardProps> = ({
           <Camera className="w-4 h-4" />
           <span>{t.tabCamera}</span>
         </button>
-
-        <button
-          onClick={() => setActiveTab('presentation')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-            activeTab === 'presentation'
-              ? 'bg-gradient-to-r from-amber-600 to-yellow-500 text-slate-950 shadow-md shadow-amber-600/20'
-              : 'text-slate-400 hover:text-slate-200 bg-slate-900/60 hover:bg-slate-800 border border-slate-800/80'
-          }`}
-        >
-          <Presentation className="w-4 h-4" />
-          <span>{t.tabPresentation}</span>
-        </button>
       </div>
 
       {/* Tab Panels */}
       <div>
+        {activeTab === 'trackpad' && (
+          <RemoteWorkspaceCanvas
+            remoteMouse={remoteMouse}
+            peerConnected={!!connectedPhone}
+          />
+        )}
+
+        {activeTab === 'media' && (
+          <LaptopMediaAndTypingZone
+            mediaState={mediaState}
+            keyboardState={keyboardState}
+            peerConnected={!!connectedPhone}
+          />
+        )}
+
         {activeTab === 'files' && (
           <FileTransferZone
             files={files}
@@ -261,10 +308,10 @@ export const LaptopDashboard: React.FC<LaptopDashboardProps> = ({
           />
         )}
 
-        {activeTab === 'trackpad' && (
-          <RemoteWorkspaceCanvas
-            remoteMouse={remoteMouse}
-            peerConnected={!!connectedPhone}
+        {activeTab === 'presentation' && (
+          <PresentationViewer
+            presentationState={presentationState}
+            onSendSlideAction={onSendSlideAction}
           />
         )}
 
@@ -273,13 +320,6 @@ export const LaptopDashboard: React.FC<LaptopDashboardProps> = ({
             cameraFrame={cameraFrame}
             cameraActive={cameraActive}
             onSendControl={onSendCameraControl}
-          />
-        )}
-
-        {activeTab === 'presentation' && (
-          <PresentationViewer
-            presentationState={presentationState}
-            onSendSlideAction={onSendSlideAction}
           />
         )}
       </div>

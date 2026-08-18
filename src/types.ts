@@ -73,4 +73,4 @@ export interface CameraEventPayload {
   action?: 'start' | 'stop' | 'toggle_flash' | 'flip_camera';
 }
 
-export type ActiveTab = 'files' | 'clipboard' | 'trackpad' | 'camera' | 'presentation' | 'notes';
+export type ActiveTab = 'files' | 'clipboard' | 'trackpad' | 'media' | 'camera' | 'presentation' | 'notes';

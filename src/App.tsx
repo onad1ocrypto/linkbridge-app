@@ -151,6 +151,8 @@ export default function App() {
     remoteMouse: bridge.remoteMouse,
     presentationState: bridge.presentationState,
     onSendSlideAction: (act: any) => handleSendPresentationAction(act),
+    mediaState: bridge.mediaState,
+    keyboardState: bridge.keyboardState,
     cameraFrame: bridge.cameraFrame,
     cameraActive: bridge.cameraActive,
     onSendCameraControl: handleSendCameraControl,
